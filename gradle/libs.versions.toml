@@ -1,0 +1,13 @@
+[versions]
+kotlin = "2.2.20"
+jdk-version = "21"
+ktlint-gradle = "13.0.0"
+pinterest-ktlint = "1.7.1"
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }
+
+[libraries]
+# Kotlin libraries
+kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin" }
