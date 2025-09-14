@@ -11,6 +11,8 @@ repositories {
 }
 
 dependencies {
+    implementation(libs.jsoup)
+
     testImplementation(libs.kotlin.test.junit5)
 }
 
