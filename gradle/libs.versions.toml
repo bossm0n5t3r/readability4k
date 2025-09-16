@@ -5,6 +5,7 @@ ktlint-gradle = "13.0.0"
 pinterest-ktlint = "1.7.1"
 jsoup = "1.21.2"
 kotlinx-serialization = "1.9.0"
+logback-classic = "1.5.18"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -18,3 +19,6 @@ jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 # Kotlin libraries
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin" }
+
+# logback-classic
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback-classic" }

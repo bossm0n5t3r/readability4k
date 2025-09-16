@@ -14,6 +14,7 @@ repositories {
 dependencies {
     implementation(libs.jsoup)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.logback.classic)
     testImplementation(libs.kotlin.test.junit5)
 }
 
