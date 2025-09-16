@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktlint)
 }
 
@@ -12,7 +13,7 @@ repositories {
 
 dependencies {
     implementation(libs.jsoup)
-
+    implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.kotlin.test.junit5)
 }
 
