@@ -78,7 +78,7 @@ fun isProbablyReaderable(
             return@any false
         }
 
-        if (node.tagName() == "p" && node.parent()?.tagName() == "li") {
+        if (node.select("li p").isNotEmpty()) {
             return@any false
         }
 
