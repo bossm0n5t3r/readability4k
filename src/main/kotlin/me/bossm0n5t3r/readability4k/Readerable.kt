@@ -1,3 +1,5 @@
+@file:Suppress("SpellCheckingInspection")
+
 package me.bossm0n5t3r.readability4k
 
 import org.jsoup.nodes.Document
@@ -76,11 +78,11 @@ fun isProbablyReaderable(
             return@any false
         }
 
-        if (node.selectFirst("li")?.selectFirst("p") == node) {
+        if (node.tagName() == "p" && node.parent()?.tagName() == "li") {
             return@any false
         }
 
-        val textContentLength = node.text().trim().length
+        val textContentLength = node.wholeText().length
         if (textContentLength < options.minContentLength) {
             return@any false
         }
