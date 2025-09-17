@@ -82,7 +82,12 @@ fun isProbablyReaderable(
             return@any false
         }
 
-        val textContentLength = node.wholeText().length
+        val htmlLength = node.wholeText().length
+        if (htmlLength < options.minContentLength) {
+            return@any false
+        }
+
+        val textContentLength = node.html().trim().length
         if (textContentLength < options.minContentLength) {
             return@any false
         }
