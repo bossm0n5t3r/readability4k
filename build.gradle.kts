@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.kotest)
 }
 
 group = "me.bossm0n5t3r"
@@ -16,6 +17,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.logback.classic)
     testImplementation(libs.kotlin.test.junit5)
+    testImplementation(libs.kotest.framework.engine)
+    testImplementation(libs.kotest.runner.junit5)
 }
 
 tasks.test {
