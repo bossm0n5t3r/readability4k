@@ -24,6 +24,26 @@ class IsProbablyReaderableTest :
                 }
             }
         }
+
+        describe("isProbablyReaderable") {
+            val makeDoc = { html: String -> Jsoup.parse(html) }
+
+            // content length: 11
+            val verySmallDoc = makeDoc("<html><p id=\"main\">hello there</p></html>")
+            // content length: 132
+            val smallDoc = makeDoc("<html><p id=\"main\">${"hello there ".repeat(11)}</p></html>")
+            // content length: 144
+            val largeDoc = makeDoc("<html><p id=\"main\">${"hello there ".repeat(12)}</p></html>")
+            // content length: 600
+            val veryLargeDoc = makeDoc("<html><p id=\"main\">${"hello there ".repeat(50)}</p></html>")
+
+            it("should only declare large documents as readerable when default options") {
+                isProbablyReaderable(verySmallDoc) shouldBe false // score: 0
+                isProbablyReaderable(smallDoc) shouldBe false // score: 0
+                isProbablyReaderable(largeDoc) shouldBe false // score: ~1.7
+                isProbablyReaderable(veryLargeDoc) shouldBe true // score: ~21.4
+            }
+        }
     }) {
     companion object {
         private const val READERABLE = "readerable"
