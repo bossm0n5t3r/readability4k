@@ -1,6 +1,7 @@
 package me.bossm0n5t3r.readability4k
 
 import org.jsoup.nodes.Element
+import java.math.BigDecimal
 
 /**
  * Configuration options for isProbablyReaderable function.
@@ -11,6 +12,6 @@ import org.jsoup.nodes.Element
  */
 data class ReaderableOptions(
     val minContentLength: Int = 140,
-    val minScore: Int = 20,
+    val minScore: BigDecimal = BigDecimal.valueOf(20),
     val visibilityChecker: (Element) -> Boolean = ::isNodeVisible,
 )
