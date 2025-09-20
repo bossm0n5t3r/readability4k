@@ -45,7 +45,7 @@ class IsProbablyReaderableTest :
             }
 
             it("should declare small and large documents as readerable when lower minContentLength") {
-                val options = ReaderableOptions(minContentLength = 120, minScore = 0)
+                val options = ReaderableOptions(minContentLength = 120, minScore = 0.toBigDecimal())
                 isProbablyReaderable(verySmallDoc, options) shouldBe false
                 isProbablyReaderable(smallDoc, options) shouldBe true
                 isProbablyReaderable(largeDoc, options) shouldBe true
@@ -53,7 +53,7 @@ class IsProbablyReaderableTest :
             }
 
             it("should only declare largest document as readerable when higher minContentLength") {
-                val options = ReaderableOptions(minContentLength = 200, minScore = 0)
+                val options = ReaderableOptions(minContentLength = 200, minScore = 0.toBigDecimal())
                 isProbablyReaderable(verySmallDoc, options) shouldBe false
                 isProbablyReaderable(smallDoc, options) shouldBe false
                 isProbablyReaderable(largeDoc, options) shouldBe false
@@ -61,7 +61,7 @@ class IsProbablyReaderableTest :
             }
 
             it("should declare small and large documents as readerable when lower minScore") {
-                val options = ReaderableOptions(minContentLength = 0, minScore = 4)
+                val options = ReaderableOptions(minContentLength = 0, minScore = 4.toBigDecimal())
                 isProbablyReaderable(verySmallDoc, options) shouldBe false // score: ~3.3
                 isProbablyReaderable(smallDoc, options) shouldBe true // score: ~11.4
                 isProbablyReaderable(largeDoc, options) shouldBe true // score: ~11.9

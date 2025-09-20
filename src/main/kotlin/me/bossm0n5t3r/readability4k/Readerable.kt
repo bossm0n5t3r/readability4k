@@ -4,6 +4,7 @@ package me.bossm0n5t3r.readability4k
 
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import java.math.BigDecimal
 import kotlin.math.sqrt
 
 /**
@@ -62,7 +63,7 @@ fun isProbablyReaderable(
     val brNodes = doc.select("div > br")
     val nodeSet = nodes.toSet() + brNodes.mapNotNull { it.parent() }.toSet()
 
-    var score = 0.0
+    var score = BigDecimal.ZERO
 
     // This is a little cheeky, we use the accumulator 'score' to decide what to return from
     // this callback:
@@ -92,7 +93,7 @@ fun isProbablyReaderable(
             return@any false
         }
 
-        score += sqrt((textContentLength - options.minContentLength).toDouble())
+        score += sqrt((textContentLength - options.minContentLength).toDouble()).toBigDecimal()
 
         score > options.minScore
     }
