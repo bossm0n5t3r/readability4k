@@ -67,6 +67,14 @@ class IsProbablyReaderableTest :
                 isProbablyReaderable(largeDoc, options) shouldBe true // score: ~11.9
                 isProbablyReaderable(veryLargeDoc, options) shouldBe true // score: ~24.4
             }
+
+            it("should declare large documents as readerable when higher minScore") {
+                val options = ReaderableOptions(minContentLength = 0, minScore = 11.5.toBigDecimal())
+                isProbablyReaderable(verySmallDoc, options) shouldBe false // score: ~3.3
+                isProbablyReaderable(smallDoc, options) shouldBe false // score: ~11.4
+                isProbablyReaderable(largeDoc, options) shouldBe true // score: ~11.9
+                isProbablyReaderable(veryLargeDoc, options) shouldBe true // score: ~24.4
+            }
         }
     }) {
     companion object {
