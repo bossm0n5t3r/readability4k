@@ -86,6 +86,17 @@ class IsProbablyReaderableTest :
                 isProbablyReaderable(veryLargeDoc, options) shouldBe false
                 called shouldBe true
             }
+
+            it("should use node visibility checker provided as option - visible") {
+                var called = false
+                val options =
+                    ReaderableOptions(visibilityChecker = {
+                        called = true
+                        true
+                    })
+                isProbablyReaderable(veryLargeDoc, options) shouldBe true
+                called shouldBe true
+            }
         }
     }) {
     companion object {
