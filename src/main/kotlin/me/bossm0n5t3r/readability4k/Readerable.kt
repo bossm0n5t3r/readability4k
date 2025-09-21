@@ -98,3 +98,11 @@ fun isProbablyReaderable(
         score > options.minScore
     }
 }
+
+fun isProbablyReaderable(
+    doc: Document,
+    visibilityChecker: (Element) -> Boolean,
+): Boolean {
+    val options = ReaderableOptions(visibilityChecker = visibilityChecker)
+    return isProbablyReaderable(doc, options)
+}
