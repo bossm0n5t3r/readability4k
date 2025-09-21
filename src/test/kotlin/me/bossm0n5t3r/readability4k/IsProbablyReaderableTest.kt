@@ -5,6 +5,7 @@ import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonPrimitive
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
 
 @Suppress("SpellCheckingInspection")
 class IsProbablyReaderableTest :
@@ -95,6 +96,16 @@ class IsProbablyReaderableTest :
                         true
                     })
                 isProbablyReaderable(veryLargeDoc, options) shouldBe true
+                called shouldBe true
+            }
+
+            it("should use node visibility checker provided as parameter - not visible") {
+                var called = false
+                val visibilityChecker = { _: Element ->
+                    called = true
+                    false
+                }
+                isProbablyReaderable(veryLargeDoc, visibilityChecker) shouldBe false
                 called shouldBe true
             }
         }
