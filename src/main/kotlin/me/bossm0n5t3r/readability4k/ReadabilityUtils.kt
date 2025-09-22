@@ -72,4 +72,24 @@ object ReadabilityUtils {
         } catch (_: Exception) {
             false
         }
+
+    /**
+     * Check if this node has only whitespace and a single element with a given tag
+     * Returns false if the DIV node contains non-empty text nodes
+     * or if it contains no element with a given tag or more than 1 element.
+     */
+    fun hasSingleTagInsideElement(
+        element: Element,
+        tag: String,
+    ): Boolean {
+        if (element.children().size != 1 || element
+                .children()
+                .firstOrNull()
+                ?.tagName()
+                ?.equals(tag, ignoreCase = true) != true
+        ) {
+            return false
+        }
+        return element.childNodes().none { it is TextNode && it.text().isNotBlank() }
+    }
 }
