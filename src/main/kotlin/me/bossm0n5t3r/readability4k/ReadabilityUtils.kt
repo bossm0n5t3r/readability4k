@@ -1,6 +1,8 @@
 package me.bossm0n5t3r.readability4k
 
 import org.jsoup.nodes.Element
+import org.jsoup.nodes.Node
+import org.jsoup.nodes.TextNode
 import java.math.BigDecimal
 
 /**
@@ -34,5 +36,17 @@ object ReadabilityUtils {
                 getInnerText(linkNode).length.toBigDecimal() * coefficient
             }
         return linkLength / textLength.toBigDecimal()
+    }
+
+    /**
+     * Determine if a node qualifies as phrasing content.
+     * https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories#Phrasing_content
+     */
+    fun isPhrasingContent(node: Node): Boolean {
+        val element = node as? Element
+        val tagName = element?.tagName()?.uppercase()
+        return node is TextNode ||
+            tagName in PHRASING_ELEMS ||
+            ((tagName == "A" || tagName == "DEL" || tagName == "INS") && element.children().all { isPhrasingContent(it) })
     }
 }
