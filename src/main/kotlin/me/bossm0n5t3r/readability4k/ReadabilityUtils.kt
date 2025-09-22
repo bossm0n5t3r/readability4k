@@ -4,6 +4,8 @@ import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 import java.math.BigDecimal
+import java.net.URI
+import java.net.URL
 
 /**
  * Utility functions for Readability processing.
@@ -62,4 +64,12 @@ object ReadabilityUtils {
         val element = node as? Element
         return (node is TextNode && node.text().trim().isEmpty()) || (element != null && element.tagName() == "BR")
     }
+
+    fun isUrl(string: String) =
+        try {
+            URI(string).toURL()
+            true
+        } catch (_: Exception) {
+            false
+        }
 }
