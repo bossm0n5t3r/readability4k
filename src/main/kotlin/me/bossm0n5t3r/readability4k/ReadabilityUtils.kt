@@ -5,7 +5,6 @@ import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 import java.math.BigDecimal
 import java.net.URI
-import java.net.URL
 
 /**
  * Utility functions for Readability processing.
