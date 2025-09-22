@@ -57,4 +57,9 @@ object ReadabilityUtils {
         element: Element,
         delimiters: String = ",",
     ): Int = getInnerText(element).split(delimiters).size - 1
+
+    fun isWhiteSpace(node: Node): Boolean {
+        val element = node as? Element
+        return (node is TextNode && node.text().trim().isEmpty()) || (element != null && element.tagName() == "BR")
+    }
 }
