@@ -8,7 +8,7 @@ data class ReadabilityResult(
     // text content of the article, with all the HTML tags removed
     val textContent: String,
     // length of an article, in characters
-    val length: Long,
+    val length: Int,
     // article description, or short excerpt from the content
     val excerpt: String?,
     // author metadata
