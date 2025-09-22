@@ -49,4 +49,12 @@ object ReadabilityUtils {
             tagName in PHRASING_ELEMS ||
             ((tagName == "A" || tagName == "DEL" || tagName == "INS") && element.children().all { isPhrasingContent(it) })
     }
+
+    /**
+     * Get the number of times a string s appears in the node e.
+     */
+    fun getCharCount(
+        element: Element,
+        delimiters: String = ",",
+    ): Int = getInnerText(element).split(delimiters).size - 1
 }
