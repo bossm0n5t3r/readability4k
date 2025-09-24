@@ -148,4 +148,9 @@ object ReadabilityUtils {
             }
         }
     }
+
+    fun flagIsActive(
+        flags: Int,
+        flag: Int,
+    ): Boolean = (flags and flag) > 0
 }
