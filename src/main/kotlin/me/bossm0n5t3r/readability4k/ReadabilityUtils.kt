@@ -91,4 +91,30 @@ object ReadabilityUtils {
         }
         return element.childNodes().none { it is TextNode && it.text().isNotBlank() }
     }
+
+    fun textSimilarity(
+        textA: String,
+        textB: String,
+    ): BigDecimal {
+        val tokensA =
+            textA
+                .lowercase()
+                .split(Regexps.TOKENIZE)
+                .filter { it.isNotBlank() }
+
+        val tokensB =
+            textB
+                .lowercase()
+                .split(Regexps.TOKENIZE)
+                .filter { it.isNotBlank() }
+
+        if (tokensA.isEmpty() || tokensB.isEmpty()) {
+            return BigDecimal.ZERO
+        }
+
+        val uniqTokensB = tokensB.filter { token -> !tokensA.contains(token) }
+        val distanceB = uniqTokensB.joinToString(" ").length.toBigDecimal() / tokensB.joinToString(" ").length.toBigDecimal()
+
+        return BigDecimal.ONE - distanceB
+    }
 }
