@@ -117,4 +117,16 @@ object ReadabilityUtils {
 
         return BigDecimal.ONE - distanceB
     }
+
+    fun headerDuplicatesTitle(
+        element: Element,
+        articleTitle: String,
+    ): Boolean {
+        if (element.tagName() != "H1" && element.tagName() != "H2") {
+            return false
+        }
+        val heading = getInnerText(element, false)
+        LOGGER.info("Evaluating similarity of header: {}, articleTitle: {}", heading, articleTitle)
+        return textSimilarity(articleTitle, heading) > BigDecimal.valueOf(0.75)
+    }
 }
