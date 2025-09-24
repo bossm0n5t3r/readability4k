@@ -129,4 +129,23 @@ object ReadabilityUtils {
         LOGGER.info("Evaluating similarity of header: {}, articleTitle: {}", heading, articleTitle)
         return textSimilarity(articleTitle, heading) > BigDecimal.valueOf(0.75)
     }
+
+    fun removeNodes(
+        nodeList: List<Node>,
+        filterFn: ((Node) -> Boolean)? = null,
+    ) {
+        if (filterFn == null) {
+            nodeList.forEach { it.remove() }
+            return
+        }
+        for (i in nodeList.size - 1 downTo 0) {
+            val node = nodeList[i]
+            val parentNode = node.parent()
+            if (parentNode != null) {
+                if (filterFn(node)) {
+                    node.remove()
+                }
+            }
+        }
+    }
 }
