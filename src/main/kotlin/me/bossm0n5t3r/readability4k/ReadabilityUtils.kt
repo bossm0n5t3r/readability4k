@@ -153,4 +153,35 @@ object ReadabilityUtils {
         flags: Int,
         flag: Int,
     ): Boolean = (flags and flag) > 0
+
+    fun getClassWeight(
+        element: Element,
+        flags: Int,
+    ): Int {
+        if (flagIsActive(flags, FLAG_WEIGHT_CLASSES).not()) {
+            return 0
+        }
+
+        var weight = 0
+
+        if (element.className().isNotBlank()) {
+            if (Regexps.NEGATIVE.containsMatchIn(element.className())) {
+                weight -= 25
+            }
+            if (Regexps.POSITIVE.containsMatchIn(element.className())) {
+                weight += 25
+            }
+        }
+
+        if (element.id().isNotBlank()) {
+            if (Regexps.NEGATIVE.containsMatchIn(element.id())) {
+                weight -= 25
+            }
+            if (Regexps.POSITIVE.containsMatchIn(element.id())) {
+                weight += 25
+            }
+        }
+
+        return weight
+    }
 }
