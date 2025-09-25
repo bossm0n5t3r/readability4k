@@ -221,8 +221,7 @@ object ReadabilityUtils {
         val textLength = getInnerText(element, true).length.toBigDecimal()
         if (textLength == BigDecimal.ZERO) return BigDecimal.ZERO
         val childrenLength =
-            element
-                .select(tags.joinToString(","))
+            getAllNodesWithTag(element, tags)
                 .sumOf { getInnerText(it, true).length.toBigDecimal() }
         return childrenLength / textLength
     }
