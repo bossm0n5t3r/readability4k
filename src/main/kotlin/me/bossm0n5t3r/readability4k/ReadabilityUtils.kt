@@ -198,4 +198,17 @@ object ReadabilityUtils {
             shouldRemove
         }
     }
+
+    fun getTextDensity(
+        element: Element,
+        tags: List<String>,
+    ): BigDecimal {
+        val textLength = getInnerText(element, true).length.toBigDecimal()
+        if (textLength == BigDecimal.ZERO) return BigDecimal.ZERO
+        val childrenLength =
+            element
+                .select(tags.joinToString(","))
+                .sumOf { getInnerText(it, true).length.toBigDecimal() }
+        return childrenLength / textLength
+    }
 }
