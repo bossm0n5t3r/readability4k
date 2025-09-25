@@ -184,4 +184,18 @@ object ReadabilityUtils {
 
         return weight
     }
+
+    fun cleanHeaders(
+        element: Element,
+        flags: Int,
+    ) {
+        val headingNodes = element.children().filter { it.tagName() == "H1" || it.tagName() == "H2" }
+        removeNodes(headingNodes) { node ->
+            val shouldRemove = getClassWeight(node as Element, flags) < 0
+            if (shouldRemove) {
+                LOGGER.info("Removing header with low class weight: {}", node)
+            }
+            shouldRemove
+        }
+    }
 }
