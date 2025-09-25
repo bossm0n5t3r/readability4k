@@ -174,6 +174,11 @@ object ReadabilityUtils {
         flag: Int,
     ): Boolean = (flags and flag) > 0
 
+    fun removeFlag(
+        flags: Int,
+        flag: Int,
+    ) = flags and flag.inv()
+
     fun getClassWeight(
         element: Element,
         flags: Int,
