@@ -247,4 +247,8 @@ object ReadabilityUtils {
 
         return hasAuthorInfo && bylineLength in 1..99
     }
+
+    fun removeScripts(doc: Element) {
+        removeNodes(getAllNodesWithTag(doc, listOf("script", "noscript")))
+    }
 }
