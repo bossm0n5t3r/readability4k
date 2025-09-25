@@ -3,6 +3,7 @@ package me.bossm0n5t3r.readability4k
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
+import org.jsoup.select.Elements
 import java.math.BigDecimal
 import java.net.URI
 
@@ -91,6 +92,16 @@ object ReadabilityUtils {
         }
         return element.childNodes().none { it is TextNode && it.text().isNotBlank() }
     }
+
+    fun getAllNodesWithTag(
+        node: Element,
+        tagNames: List<String>,
+    ): Elements =
+        if (tagNames.isNotEmpty()) {
+            node.select(tagNames.joinToString(","))
+        } else {
+            Elements()
+        }
 
     fun textSimilarity(
         textA: String,
