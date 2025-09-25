@@ -204,7 +204,7 @@ object ReadabilityUtils {
         element: Element,
         flags: Int,
     ) {
-        val headingNodes = element.select("H1,H2")
+        val headingNodes = getAllNodesWithTag(element, listOf("h1", "h2"))
         removeNodes(headingNodes) { node ->
             val shouldRemove = getClassWeight(node as Element, flags) < 0
             if (shouldRemove) {
