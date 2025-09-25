@@ -225,4 +225,21 @@ object ReadabilityUtils {
                 .sumOf { getInnerText(it, true).length.toBigDecimal() }
         return childrenLength / textLength
     }
+
+    fun isValidByLine(
+        element: Element,
+        matchString: String,
+    ): Boolean {
+        val rel = element.attr("rel")
+        val itemprop = element.attr("itemprop")
+        val bylineLength = element.text().trim().length
+
+        val hasAuthorRel = rel == "author"
+        val hasAuthorItemprop = itemprop.isNotEmpty() && itemprop.contains("author")
+        val matchesPattern = matchString.isNotEmpty() && Regexps.BYLINE.containsMatchIn(matchString)
+
+        val hasAuthorInfo = hasAuthorRel || hasAuthorItemprop || matchesPattern
+
+        return hasAuthorInfo && bylineLength in 1..99
+    }
 }
