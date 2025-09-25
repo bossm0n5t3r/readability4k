@@ -40,6 +40,8 @@ object ReadabilityUtils {
         return linkLength / textLength.toBigDecimal()
     }
 
+    fun Elements.everyNode(predicate: (Element) -> Boolean): Boolean = this.all(predicate)
+
     /**
      * Determine if a node qualifies as phrasing content.
      * https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories#Phrasing_content
