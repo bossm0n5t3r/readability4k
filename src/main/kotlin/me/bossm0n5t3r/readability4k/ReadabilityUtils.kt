@@ -146,6 +146,11 @@ object ReadabilityUtils {
     }
 
     fun removeNodes(
+        elements: Elements,
+        filterFn: ((Node) -> Boolean)? = null,
+    ) = removeNodes(elements.toList(), filterFn)
+
+    fun removeNodes(
         nodeList: List<Node>,
         filterFn: ((Node) -> Boolean)? = null,
     ) {
