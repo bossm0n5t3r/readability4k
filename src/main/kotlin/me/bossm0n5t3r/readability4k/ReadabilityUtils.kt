@@ -42,6 +42,8 @@ object ReadabilityUtils {
 
     fun Elements.everyNode(predicate: (Element) -> Boolean): Boolean = this.all(predicate)
 
+    fun Elements.someNode(predicate: (Element) -> Boolean): Boolean = this.any(predicate)
+
     /**
      * Determine if a node qualifies as phrasing content.
      * https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories#Phrasing_content
