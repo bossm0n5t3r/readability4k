@@ -189,7 +189,7 @@ object ReadabilityUtils {
         element: Element,
         flags: Int,
     ) {
-        val headingNodes = element.children().filter { it.tagName() == "H1" || it.tagName() == "H2" }
+        val headingNodes = element.select("H1,H2")
         removeNodes(headingNodes) { node ->
             val shouldRemove = getClassWeight(node as Element, flags) < 0
             if (shouldRemove) {
