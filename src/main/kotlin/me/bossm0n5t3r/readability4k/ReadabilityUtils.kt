@@ -276,4 +276,22 @@ object ReadabilityUtils {
         }
         return isNodeVisible(element)
     }
+
+    fun getNextNode(
+        element: Element,
+        ignoreSelfAndKids: Boolean,
+    ): Element? {
+        if (!ignoreSelfAndKids && element.children().isNotEmpty()) {
+            return element.children().first()
+        }
+
+        element.nextElementSibling()?.let { return it }
+
+        var parent = element.parent()
+        while (parent != null && parent.nextElementSibling() == null) {
+            parent = parent.parent()
+        }
+
+        return parent?.nextElementSibling()
+    }
 }
