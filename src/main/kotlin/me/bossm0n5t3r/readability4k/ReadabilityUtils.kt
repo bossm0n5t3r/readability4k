@@ -268,4 +268,12 @@ object ReadabilityUtils {
         val children = element.children()
         return children.isEmpty() || children.size == element.getElementsByTag("br").size + element.getElementsByTag("hr").size
     }
+
+    fun isProbablyVisible(element: Element): Boolean {
+        val style = element.attr("style")
+        if (style.contains("visibility:hidden") || style.contains("visibility: hidden")) {
+            return false
+        }
+        return isNodeVisible(element)
+    }
 }
