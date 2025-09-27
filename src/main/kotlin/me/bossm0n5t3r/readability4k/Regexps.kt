@@ -86,7 +86,7 @@ object Regexps {
 
     val HASH_URL = Regex("^#.+")
 
-    val SRC_SET_URL = Regex("(\\S+)(\\s+[\\d.]+[xw])?(\\s*(?:,|$))")
+    val SRCSET_URL = Regex("(\\S+)(\\s+[\\d.]+[xw])?(\\s*(?:,|$))")
 
     val B64_DATA_URL =
         Regex(
