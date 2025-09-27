@@ -294,4 +294,10 @@ object ReadabilityUtils {
 
         return parent?.nextElementSibling()
     }
+
+    fun removeAndGetNext(element: Element): Element? {
+        val nextElement = getNextNode(element, true)
+        element.remove()
+        return nextElement
+    }
 }
