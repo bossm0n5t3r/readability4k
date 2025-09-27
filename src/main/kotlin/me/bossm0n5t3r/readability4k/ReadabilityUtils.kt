@@ -256,4 +256,9 @@ object ReadabilityUtils {
     fun removeScripts(doc: Element) {
         removeNodes(getAllNodesWithTag(doc, listOf("script", "noscript")))
     }
+
+    fun hasChildBlockElement(element: Element): Boolean =
+        element.children().someNode {
+            DIV_TO_P_ELEMS.contains(it.tagName()) || hasChildBlockElement(it)
+        }
 }
