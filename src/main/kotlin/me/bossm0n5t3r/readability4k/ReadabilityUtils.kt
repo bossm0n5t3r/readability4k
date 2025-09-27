@@ -261,4 +261,11 @@ object ReadabilityUtils {
         element.children().someNode {
             DIV_TO_P_ELEMS.contains(it.tagName()) || hasChildBlockElement(it)
         }
+
+    fun isElementWithoutContent(element: Element): Boolean {
+        if (element.text().trim().isNotEmpty()) return false
+
+        val children = element.children()
+        return children.isEmpty() || children.size == element.getElementsByTag("br").size + element.getElementsByTag("hr").size
+    }
 }
