@@ -383,4 +383,19 @@ object ReadabilityUtils {
             }
         }
     }
+
+    fun cleanStyles(element: Element?) {
+        if (element == null || element.tagName().lowercase() == "svg") {
+            return
+        }
+
+        PRESENTATIONAL_ATTRIBUTES.forEach { element.removeAttr(it) }
+
+        if (DEPRECATED_SIZE_ATTRIBUTE_ELEMS.contains(element.tagName().lowercase())) {
+            element.removeAttr("width")
+            element.removeAttr("height")
+        }
+
+        element.children().forEach { cleanStyles(it) }
+    }
 }
