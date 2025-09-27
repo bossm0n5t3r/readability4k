@@ -1,5 +1,6 @@
 package me.bossm0n5t3r.readability4k
 
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
@@ -299,5 +300,87 @@ object ReadabilityUtils {
         val nextElement = getNextNode(element, true)
         element.remove()
         return nextElement
+    }
+
+    fun fixRelativeUris(
+        document: Document,
+        articleContent: Element,
+    ) {
+        val baseURI = document.baseUri()
+        val documentURI = document.location()
+
+        fun toAbsoluteURI(uri: String): String {
+            if (baseURI == documentURI && uri.startsWith("#")) {
+                return uri
+            }
+
+            try {
+                return URI(baseURI).resolve(uri).toString()
+            } catch (ex: Exception) {
+            }
+            return uri
+        }
+
+        val links = getAllNodesWithTag(articleContent, listOf("a"))
+        links.forEach { link ->
+            val href = link.attr("href")
+            if (href.isNotBlank()) {
+                if (href.startsWith("javascript:")) {
+                    val childNodes = link.childNodes()
+                    if (childNodes.size == 1 && childNodes.first() is TextNode) {
+                        val textNode = TextNode(link.text())
+                        link.replaceWith(textNode)
+                    } else {
+                        val container = Element("span")
+                        val children = link.childNodes().toList()
+                        for (child in children) {
+                            child.remove()
+                            container.appendChild(child)
+                        }
+                        link.replaceWith(container)
+                    }
+                } else {
+                    link.attr("href", toAbsoluteURI(href))
+                }
+            }
+        }
+
+        val medias =
+            getAllNodesWithTag(
+                articleContent,
+                listOf(
+                    "img",
+                    "picture",
+                    "figure",
+                    "video",
+                    "audio",
+                    "source",
+                ),
+            )
+
+        medias.forEach { media ->
+            val src = media.attr("src")
+            val poster = media.attr("poster")
+            val srcset = media.attr("srcset")
+
+            if (src.isNotBlank()) {
+                media.attr("src", toAbsoluteURI(src))
+            }
+
+            if (poster.isNotBlank()) {
+                media.attr("poster", toAbsoluteURI(poster))
+            }
+
+            if (srcset.isNotBlank()) {
+                val newSrcset =
+                    srcset.replace(Regexps.SRCSET_URL) { matchResult ->
+                        val url = matchResult.groupValues[1]
+                        val descriptor = matchResult.groupValues[2]
+                        val comma = matchResult.groupValues[3]
+                        toAbsoluteURI(url) + descriptor + comma
+                    }
+                media.attr("srcset", newSrcset)
+            }
+        }
     }
 }
