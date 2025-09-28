@@ -501,4 +501,23 @@ object ReadabilityUtils {
 
         return replacement
     }
+
+    fun replaceNodeTags(
+        nodeList: Elements,
+        newTagName: String,
+    ) {
+        val nodesCopy = nodeList.toList()
+        for (node in nodesCopy) {
+            setNodeTag(node, newTagName)
+        }
+    }
+
+    fun replaceNodeTags(
+        nodeList: List<Element>,
+        newTagName: String,
+    ) {
+        for (node in nodeList) {
+            setNodeTag(node, newTagName)
+        }
+    }
 }
