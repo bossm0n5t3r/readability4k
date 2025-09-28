@@ -435,4 +435,26 @@ object ReadabilityUtils {
             node = getNextNode(node)
         }
     }
+
+    fun cleanClasses(
+        node: Element,
+        classesToPreserve: Set<String>,
+    ) {
+        val preservedClasses =
+            node
+                .attr("class")
+                .takeIf { it.isNotBlank() }
+                ?.split(Regex("\\s+"))
+                ?.filter { it.isNotBlank() && it in classesToPreserve }
+                ?.joinToString(" ")
+                ?.takeIf { it.isNotEmpty() }
+
+        if (preservedClasses != null) {
+            node.attr("class", preservedClasses)
+        } else {
+            node.removeAttr("class")
+        }
+
+        node.children().forEach { cleanClasses(it, classesToPreserve) }
+    }
 }
