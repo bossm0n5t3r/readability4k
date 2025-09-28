@@ -457,4 +457,17 @@ object ReadabilityUtils {
 
         node.children().forEach { cleanClasses(it, classesToPreserve) }
     }
+
+    fun postProcessContent(
+        articleContent: Element,
+        document: Document,
+        keepClasses: Boolean,
+        classesToPreserve: Set<String>,
+    ) {
+        fixRelativeUris(document, articleContent)
+        simplifyNestedElements(articleContent)
+        if (!keepClasses) {
+            cleanClasses(articleContent, classesToPreserve)
+        }
+    }
 }
