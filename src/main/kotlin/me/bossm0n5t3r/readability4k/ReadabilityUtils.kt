@@ -280,7 +280,7 @@ object ReadabilityUtils {
 
     fun getNextNode(
         element: Element,
-        ignoreSelfAndKids: Boolean,
+        ignoreSelfAndKids: Boolean = false,
     ): Element? {
         if (!ignoreSelfAndKids && element.children().isNotEmpty()) {
             return element.children().first()
@@ -397,5 +397,42 @@ object ReadabilityUtils {
         }
 
         element.children().forEach { cleanStyles(it) }
+    }
+
+    fun simplifyNestedElements(articleContent: Element) {
+        var node = articleContent as Element?
+
+        while (node != null) {
+            val parent = node.parent()
+
+            if (parent != null &&
+                (node.tagName().equals("DIV", ignoreCase = true) || node.tagName().equals("SECTION", ignoreCase = true)) &&
+                !(node.id().isNotEmpty() && node.id().startsWith("readability"))
+            ) {
+                if (isElementWithoutContent(node)) {
+                    node = removeAndGetNext(node)
+                    continue
+                }
+                if (
+                    hasSingleTagInsideElement(node, "DIV") ||
+                    hasSingleTagInsideElement(node, "SECTION")
+                ) {
+                    val childElement = node.children().firstOrNull()
+
+                    if (childElement != null) {
+                        node.attributes().forEach { attribute ->
+                            childElement.attr(attribute.key, attribute.value)
+                        }
+
+                        // 부모 노드를 자식 노드로 교체
+                        node.replaceWith(childElement)
+                        node = childElement
+                        continue
+                    }
+                }
+            }
+
+            node = getNextNode(node)
+        }
     }
 }
