@@ -470,4 +470,35 @@ object ReadabilityUtils {
             cleanClasses(articleContent, classesToPreserve)
         }
     }
+
+    fun setNodeTag(
+        node: Element,
+        tag: String,
+    ): Element {
+        val replacement = Element(tag)
+
+        val childrenToMove = node.children().toList()
+        for (child in childrenToMove) {
+            child.remove()
+            replacement.appendChild(child)
+        }
+
+        val textNodes = node.textNodes()
+        for (textNode in textNodes.toList()) {
+            textNode.remove()
+            replacement.appendChild(textNode)
+        }
+
+        for (attribute in node.attributes()) {
+            replacement.attr(attribute.key, attribute.value)
+        }
+
+        if (node.hasAttr("data-readability")) {
+            replacement.attr("data-readability", node.attr("data-readability"))
+        }
+
+        node.replaceWith(replacement)
+
+        return replacement
+    }
 }
