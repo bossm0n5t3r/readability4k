@@ -592,4 +592,22 @@ object ReadabilityUtils {
             }
         }
     }
+
+    fun isSingleImage(node: Element?): Boolean {
+        var current = node
+
+        while (current != null) {
+            if (current.tagName().equals("IMG", ignoreCase = true)) {
+                return true
+            }
+
+            if (current.children().size != 1 || current.text().trim().isNotEmpty()) {
+                return false
+            }
+
+            current = current.children().firstOrNull()
+        }
+
+        return false
+    }
 }
