@@ -629,4 +629,90 @@ object ReadabilityUtils {
                 }
         }
     }
+
+    fun getArticleTitle(document: Document): String {
+        fun wordCount(str: String): Int = if (str.trim().isEmpty()) 0 else str.split(Regex("\\s+")).size
+
+        var curTitle = ""
+        var origTitle = ""
+
+        try {
+            curTitle = document.title().trim()
+            origTitle = curTitle
+
+            if (curTitle.isEmpty()) {
+                document.getElementsByTag("title").firstOrNull()?.let { titleElement ->
+                    curTitle = getInnerText(titleElement)
+                    origTitle = curTitle
+                }
+            }
+        } catch (e: Exception) {
+        }
+
+        var titleHadHierarchicalSeparators = false
+
+        val titleSeparators = """\|\-–—\\\/>»"""
+        val separatorRegex = Regex("""\s[$titleSeparators]\s""")
+        val hierarchicalSeparatorRegex = Regex("""\s[\\/>»]\s""")
+
+        if (separatorRegex.containsMatchIn(curTitle)) {
+            titleHadHierarchicalSeparators = hierarchicalSeparatorRegex.containsMatchIn(curTitle)
+
+            val allSeparators = separatorRegex.findAll(origTitle).toList()
+            if (allSeparators.isNotEmpty()) {
+                val lastSeparator = allSeparators.last()
+                curTitle = origTitle.take(lastSeparator.range.first)
+
+                if (wordCount(curTitle) < 3) {
+                    curTitle =
+                        origTitle.replace(
+                            Regex("""^[^$titleSeparators]*[$titleSeparators]""", RegexOption.IGNORE_CASE),
+                            "",
+                        )
+                }
+            }
+        } else if (curTitle.contains(": ")) {
+            val headings = getAllNodesWithTag(document, listOf("h1", "h2"))
+            val trimmedTitle = curTitle.trim()
+            val match =
+                headings.someNode { heading ->
+                    heading.text().trim() == trimmedTitle
+                }
+
+            if (!match) {
+                val lastColonIndex = origTitle.lastIndexOf(":")
+                if (lastColonIndex != -1) {
+                    curTitle = origTitle.substring(lastColonIndex + 1).trim()
+                    if (wordCount(curTitle) < 3) {
+                        curTitle = origTitle.substring(origTitle.indexOf(":") + 1).trim()
+                    } else {
+                        val firstColonIndex = origTitle.indexOf(":")
+                        if (firstColonIndex != -1 && wordCount(origTitle.take(firstColonIndex)) > 5) {
+                            curTitle = origTitle
+                        }
+                    }
+                }
+            }
+        } else if (curTitle.length !in 15..150) {
+            val h1Elements = document.getElementsByTag("h1")
+
+            h1Elements.singleOrNull()?.let {
+                curTitle = getInnerText(it)
+            }
+        }
+
+        curTitle = curTitle.trim().replace(Regexps.NORMALIZE, " ")
+
+        val curTitleWordCount = wordCount(curTitle)
+        if (curTitleWordCount <= 4 &&
+            (
+                !titleHadHierarchicalSeparators ||
+                    curTitleWordCount != wordCount(origTitle.replace(separatorRegex, "")) - 1
+            )
+        ) {
+            curTitle = origTitle
+        }
+
+        return curTitle
+    }
 }
