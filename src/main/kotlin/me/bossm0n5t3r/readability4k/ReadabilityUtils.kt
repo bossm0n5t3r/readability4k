@@ -520,4 +520,15 @@ object ReadabilityUtils {
             setNodeTag(node, newTagName)
         }
     }
+
+    fun nextNode(node: Node?): Node? {
+        var next = node
+        while (next != null &&
+            next !is Element &&
+            (next is TextNode && Regexps.WHITESPACE.containsMatchIn(next.text()))
+        ) {
+            next = next.nextSibling()
+        }
+        return next
+    }
 }
