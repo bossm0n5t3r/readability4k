@@ -610,4 +610,23 @@ object ReadabilityUtils {
 
         return false
     }
+
+    fun cleanMatchedNodes(
+        element: Element,
+        filter: (Element, String) -> Boolean,
+    ) {
+        val endOfSearchMarkerNode = getNextNode(element, true)
+        var next = getNextNode(element)
+
+        while (next != null && next != endOfSearchMarkerNode) {
+            val classAndId = "${next.className()} ${next.id()}".trim()
+
+            next =
+                if (filter(next, classAndId)) {
+                    removeAndGetNext(next)
+                } else {
+                    getNextNode(next)
+                }
+        }
+    }
 }
