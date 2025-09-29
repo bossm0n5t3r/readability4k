@@ -531,4 +531,65 @@ object ReadabilityUtils {
         }
         return next
     }
+
+    fun replaceBrs(elem: Element) {
+        val brElements = getAllNodesWithTag(elem, listOf("br"))
+
+        brElements.forEach { br ->
+            var next: Node? = br.nextSibling()
+            var replaced = false
+
+            while (true) {
+                next = nextNode(next)
+                if (next == null || next !is Element ||
+                    !next.tagName().equals("BR", ignoreCase = true)
+                ) {
+                    break
+                }
+
+                replaced = true
+                val brSibling = next.nextSibling()
+                next.remove()
+                next = brSibling
+            }
+
+            if (replaced) {
+                val p = Element("p")
+                br.replaceWith(p)
+
+                next = p.nextSibling()
+                while (next != null) {
+                    if (next is Element && next.tagName().equals("BR", ignoreCase = true)) {
+                        val nextElem = nextNode(next.nextSibling())
+                        if (nextElem is Element && nextElem.tagName().equals("BR", ignoreCase = true)) {
+                            break
+                        }
+                    }
+
+                    if (!isPhrasingContent(next)) {
+                        break
+                    }
+
+                    val sibling = next.nextSibling()
+                    p.appendChild(next)
+                    next = sibling
+                }
+
+                while (p.childNodeSize() > 0) {
+                    val lastChild = p.childNode(p.childNodeSize() - 1)
+                    if (isWhiteSpace(lastChild)) {
+                        lastChild.remove()
+                    } else {
+                        break
+                    }
+                }
+
+                p.parent()?.let { parent ->
+                    if (parent.tagName().equals("P", ignoreCase = true)) {
+                        setNodeTag(parent, "DIV")
+                    }
+                }
+            }
+        }
+    }
 }
