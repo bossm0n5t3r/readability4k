@@ -715,4 +715,12 @@ object ReadabilityUtils {
 
         return curTitle
     }
+
+    fun prepDocument(document: Document) {
+        removeNodes(getAllNodesWithTag(document, listOf("style")))
+
+        replaceBrs(document.body())
+
+        replaceNodeTags(getAllNodesWithTag(document, listOf("font")), "SPAN")
+    }
 }
