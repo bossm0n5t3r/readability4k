@@ -818,4 +818,34 @@ object ReadabilityUtils {
 
         return ancestors
     }
+
+    fun unescapeHtmlEntities(str: String?): String? {
+        if (str.isNullOrBlank()) {
+            return str
+        }
+
+        return str
+            .replace(Regex("&(quot|amp|apos|lt|gt);")) { matchResult ->
+                val tag = matchResult.groupValues[1]
+                HTML_ESCAPE_MAP[tag] ?: matchResult.value
+            }.replace(Regex("&#(?:x([0-9a-f]+)|([0-9]+));", RegexOption.IGNORE_CASE)) { matchResult ->
+                val hex = matchResult.groupValues[1]
+                val numStr = matchResult.groupValues[2]
+
+                val num =
+                    if (hex.isNotEmpty()) {
+                        hex.toInt(16)
+                    } else {
+                        numStr.toInt(10)
+                    }
+
+                val validNum =
+                    when {
+                        num == 0 || num > 0x10FFFF || (num in 0xD800..0xDFFF) -> 0xFFFD
+                        else -> num
+                    }
+
+                String(Character.toChars(validNum))
+            }
+    }
 }
