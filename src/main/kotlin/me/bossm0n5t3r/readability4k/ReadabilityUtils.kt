@@ -745,4 +745,31 @@ object ReadabilityUtils {
 
         return rows to columns
     }
+
+    fun hasAncestorTag(
+        node: Element,
+        tagName: String,
+        maxDepth: Int = 3,
+        filterFn: ((Element) -> Boolean)? = null,
+    ): Boolean {
+        val normalizedTagName = tagName.uppercase()
+        var depth = 0
+        var currentNode: Element? = node
+
+        while (currentNode?.parent() != null) {
+            if (maxDepth in 1..<depth) {
+                return false
+            }
+
+            val parent = currentNode.parent()
+            if (parent?.tagName()?.uppercase() == normalizedTagName && (filterFn == null || filterFn(parent))) {
+                return true
+            }
+
+            currentNode = parent
+            depth++
+        }
+
+        return false
+    }
 }
