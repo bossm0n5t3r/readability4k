@@ -723,4 +723,26 @@ object ReadabilityUtils {
 
         replaceNodeTags(getAllNodesWithTag(document, listOf("font")), "SPAN")
     }
+
+    fun getRowAndColumnCount(table: Element): Pair<Int, Int> {
+        var rows = 0
+        var columns = 0
+        val trs = table.getElementsByTag("tr")
+
+        for (tr in trs) {
+            val rowspan = tr.attr("rowspan").toIntOrNull() ?: 1
+            rows += rowspan
+
+            var columnsInThisRow = 0
+            val cells = tr.getElementsByTag("td")
+
+            for (cell in cells) {
+                val colspan = cell.attr("colspan").toIntOrNull() ?: 1
+                columnsInThisRow += colspan
+            }
+            columns = maxOf(columns, columnsInThisRow)
+        }
+
+        return rows to columns
+    }
 }
