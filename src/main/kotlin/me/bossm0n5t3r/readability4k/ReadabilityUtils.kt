@@ -848,4 +848,24 @@ object ReadabilityUtils {
                 String(Character.toChars(validNum))
             }
     }
+
+    fun initializeNode(
+        node: Element,
+        flags: Int,
+    ) {
+        node.attr("data-readability-score", "0")
+
+        val tagName = node.tagName().uppercase()
+
+        val contentScore =
+            when (tagName) {
+                "DIV" -> 5
+                "PRE", "TD", "BLOCKQUOTE" -> 3
+                "ADDRESS", "OL", "UL", "DL", "DD", "DT", "LI", "FORM" -> -3
+                "H1", "H2", "H3", "H4", "H5", "H6", "TH" -> -5
+                else -> 0
+            } + getClassWeight(node, flags)
+
+        node.attr("data-readability-score", contentScore.toString())
+    }
 }
