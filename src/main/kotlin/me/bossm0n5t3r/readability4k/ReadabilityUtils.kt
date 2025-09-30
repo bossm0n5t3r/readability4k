@@ -772,4 +772,27 @@ object ReadabilityUtils {
 
         return false
     }
+
+    fun clean(
+        e: Element,
+        tag: String,
+        allowedVideoRegex: Regex,
+    ) {
+        val isEmbed = tag in setOf("object", "embed", "iframe")
+
+        removeNodes(getAllNodesWithTag(e, listOf(tag))) { node ->
+            val element = node as Element
+
+            if (isEmbed) {
+                if (element.attributes().any { allowedVideoRegex.containsMatchIn(it.value) }) {
+                    return@removeNodes false
+                }
+
+                if (element.tagName() == "object" && allowedVideoRegex.containsMatchIn(element.html())) {
+                    return@removeNodes false
+                }
+            }
+            true
+        }
+    }
 }
