@@ -795,4 +795,27 @@ object ReadabilityUtils {
             true
         }
     }
+
+    fun getNodeAncestors(
+        node: Element,
+        maxDepth: Int = 0,
+    ): List<Element> {
+        var i = 0
+        val ancestors = mutableListOf<Element>()
+        var currentNode: Element? = node
+
+        while (currentNode?.parent() != null) {
+            val parent = currentNode.parent()
+            requireNotNull(parent) { "Parent node should not be null" }
+            ancestors.add(parent)
+
+            if (maxDepth > 0 && ++i == maxDepth) {
+                break
+            }
+
+            currentNode = parent
+        }
+
+        return ancestors
+    }
 }
