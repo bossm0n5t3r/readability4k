@@ -1,6 +1,6 @@
 package me.bossm0n5t3r.readability4k
 
-import me.bossm0n5t3r.readability4k.Regexps.IMAGE_FILE_REGEX
+import me.bossm0n5t3r.readability4k.Regexps.IMAGE_EXTENSION_REGEX
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -963,7 +963,7 @@ object ReadabilityUtils {
                         continue
                     }
 
-                    if (attr.key == "src" || attr.key == "srcset" || IMAGE_FILE_REGEX.containsMatchIn(attr.value)) {
+                    if (attr.key == "src" || attr.key == "srcset" || IMAGE_EXTENSION_REGEX.containsMatchIn(attr.value)) {
                         if (newImg.attr(attr.key) == attr.value) {
                             continue
                         }
