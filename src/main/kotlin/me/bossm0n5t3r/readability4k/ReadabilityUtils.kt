@@ -1,6 +1,8 @@
 package me.bossm0n5t3r.readability4k
 
 import me.bossm0n5t3r.readability4k.Regexps.IMAGE_EXTENSION_REGEX
+import me.bossm0n5t3r.readability4k.Regexps.IMAGE_URL_REGEX
+import me.bossm0n5t3r.readability4k.Regexps.SRCSET_CANDIDATE_REGEX
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -935,7 +937,7 @@ object ReadabilityUtils {
         doc.getElementsByTag("img").toList().forEach { img ->
             for (attr in img.attributes()) {
                 if (attr.key in imageSourceAttributes) return@forEach
-                if (IMAGE_FILE_REGEX.containsMatchIn(attr.value)) return@forEach
+                if (IMAGE_EXTENSION_REGEX.containsMatchIn(attr.value)) return@forEach
             }
             img.remove()
         }
@@ -978,6 +980,62 @@ object ReadabilityUtils {
 
                 prevElement.replaceWith(newImg)
                 noscript.remove()
+            }
+        }
+    }
+
+    fun fixLazyImages(root: Element) {
+        getAllNodesWithTag(root, listOf("img", "picture", "figure")).forEach { elem ->
+            val srcAttr = elem.attr("src")
+            if (Regexps.B64_DATA_URL.containsMatchIn(srcAttr)) {
+                val parts = Regexps.B64_DATA_URL.find(srcAttr)
+
+                if (parts?.groupValues[1] != "image/svg+xml") {
+                    val srcCouldBeRemoved =
+                        elem.attributes().any {
+                            it.key != "src" && IMAGE_EXTENSION_REGEX.containsMatchIn(it.value)
+                        }
+
+                    if (srcCouldBeRemoved) {
+                        val dataUrlHeaderLength = parts?.groupValues[0]?.length ?: 0
+                        val b64length = srcAttr.length - dataUrlHeaderLength
+                        if (b64length < 133) {
+                            elem.removeAttr("src")
+                        }
+                    }
+                }
+            }
+
+            val srcsetAttr = elem.attr("srcset")
+            if ((elem.hasAttr("src") || (srcsetAttr.isNotBlank() && srcsetAttr != "null")) &&
+                !elem.className().contains("lazy", ignoreCase = true)
+            ) {
+                return@forEach
+            }
+
+            for (attr in elem.attributes()) {
+                if (attr.key in setOf("src", "srcset", "alt")) {
+                    continue
+                }
+
+                val copyTo =
+                    when {
+                        SRCSET_CANDIDATE_REGEX.containsMatchIn(attr.value) -> "srcset"
+                        IMAGE_URL_REGEX.matches(attr.value) -> "src"
+                        else -> null
+                    }
+
+                if (copyTo != null) {
+                    when (elem.tagName().lowercase()) {
+                        "img", "picture" -> elem.attr(copyTo, attr.value)
+                        "figure" -> {
+                            if (getAllNodesWithTag(elem, listOf("img", "picture")).isEmpty()) {
+                                val newImg = Element("img").attr(copyTo, attr.value)
+                                elem.appendChild(newImg)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
