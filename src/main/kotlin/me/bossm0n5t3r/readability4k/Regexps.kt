@@ -120,4 +120,15 @@ object Regexps {
     val IMAGE_EXTENSION_REGEX = "\\.(jpg|jpeg|png|webp)".toRegex(RegexOption.IGNORE_CASE)
     val IMAGE_URL_REGEX = """^\s*\S+\.(jpg|jpeg|png|webp)\S*\s*$""".toRegex(RegexOption.IGNORE_CASE)
     val SRCSET_CANDIDATE_REGEX = """\.(jpg|jpeg|png|webp)\s+\d""".toRegex(RegexOption.IGNORE_CASE)
+
+    val PROPERTY_PATTERN =
+        Regex(
+            """\s*(article|dc|dcterm|og|twitter)\s*:\s*(author|creator|description|published_time|title|site_name)\s*""",
+            RegexOption.IGNORE_CASE,
+        )
+    val NAME_PATTERN =
+        Regex(
+            """^\s*(?:(dc|dcterm|og|twitter|parsely|weibo:(article|webpage))\s*[-\\.:]\s*)?(author|creator|pub-date|description|title|site_name)\s*$""",
+            RegexOption.IGNORE_CASE,
+        )
 }
