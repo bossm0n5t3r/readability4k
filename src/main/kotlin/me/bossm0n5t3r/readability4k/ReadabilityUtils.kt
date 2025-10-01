@@ -868,4 +868,63 @@ object ReadabilityUtils {
 
         node.attr("data-readability-score", contentScore.toString())
     }
+
+    fun markDataTables(root: Element) {
+        val tables = root.getElementsByTag("table")
+
+        for (table in tables) {
+            val role = table.attr("role")
+            if (role == "presentation") {
+                table.attr("_readabilityDataTable", "false")
+                continue
+            }
+
+            val datatable = table.attr("datatable")
+            if (datatable == "0") {
+                table.attr("_readabilityDataTable", "false")
+                continue
+            }
+
+            val summary = table.attr("summary")
+            if (summary.isNotBlank()) {
+                table.attr("_readabilityDataTable", "true")
+                continue
+            }
+
+            val caption = table.getElementsByTag("caption").firstOrNull()
+            if (caption != null && caption.childNodes().isNotEmpty()) {
+                table.attr("_readabilityDataTable", "true")
+                continue
+            }
+
+            val dataTableDescendants = setOf("col", "colgroup", "tfoot", "thead", "th")
+            val descendantExists = { tag: String ->
+                table.getElementsByTag(tag).isNotEmpty()
+            }
+
+            if (dataTableDescendants.any(descendantExists)) {
+                table.attr("_readabilityDataTable", "true")
+                continue
+            }
+
+            if (table.getElementsByTag("table").isNotEmpty()) {
+                table.attr("_readabilityDataTable", "false")
+                continue
+            }
+
+            val (rows, columns) = getRowAndColumnCount(table)
+
+            if (columns == 1 || rows == 1) {
+                table.attr("_readabilityDataTable", "false")
+                continue
+            }
+
+            if (rows >= 10 || columns > 4) {
+                table.attr("_readabilityDataTable", "true")
+                continue
+            }
+
+            table.attr("_readabilityDataTable", (rows * columns > 10).toString())
+        }
+    }
 }
