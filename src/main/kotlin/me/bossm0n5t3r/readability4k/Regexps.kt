@@ -118,4 +118,6 @@ object Regexps {
         )
 
     val IMAGE_EXTENSION_REGEX = "\\.(jpg|jpeg|png|webp)".toRegex(RegexOption.IGNORE_CASE)
+    val IMAGE_URL_REGEX = """^\s*\S+\.(jpg|jpeg|png|webp)\S*\s*$""".toRegex(RegexOption.IGNORE_CASE)
+    val SRCSET_CANDIDATE_REGEX = """\.(jpg|jpeg|png|webp)\s+\d""".toRegex(RegexOption.IGNORE_CASE)
 }
