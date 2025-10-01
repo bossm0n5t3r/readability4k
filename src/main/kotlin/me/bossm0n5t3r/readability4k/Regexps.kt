@@ -116,4 +116,6 @@ object Regexps {
             "^((loading|正在加载|Загрузка|chargement|cargando)(…|\\.\\.\\.)?)$",
             RegexOption.IGNORE_CASE,
         )
+
+    val IMAGE_FILE_REGEX = "\\.(jpg|jpeg|png|webp)".toRegex(RegexOption.IGNORE_CASE)
 }
