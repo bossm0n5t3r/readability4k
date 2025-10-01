@@ -1,5 +1,7 @@
 package me.bossm0n5t3r.readability4k
 
+import me.bossm0n5t3r.readability4k.Regexps.IMAGE_FILE_REGEX
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
@@ -925,6 +927,58 @@ object ReadabilityUtils {
             }
 
             table.attr("_readabilityDataTable", (rows * columns > 10).toString())
+        }
+    }
+
+    fun unwrapNoscriptImages(doc: Element) {
+        val imageSourceAttributes = setOf("src", "srcset", "data-src", "data-srcset")
+        doc.getElementsByTag("img").toList().forEach { img ->
+            for (attr in img.attributes()) {
+                if (attr.key in imageSourceAttributes) return@forEach
+                if (IMAGE_FILE_REGEX.containsMatchIn(attr.value)) return@forEach
+            }
+            img.remove()
+        }
+
+        doc.getElementsByTag("noscript").toList().forEach { noscript ->
+            if (!isSingleImage(noscript)) {
+                return@forEach
+            }
+
+            val tmp = Jsoup.parseBodyFragment(noscript.html())
+            val prevElement = noscript.previousElementSibling()
+
+            if (prevElement != null && isSingleImage(prevElement)) {
+                var prevImg = prevElement
+                if (prevImg.tagName() != "img") {
+                    prevImg = prevElement.getElementsByTag("img").firstOrNull()
+                }
+                requireNotNull(prevImg) { "Previous element should not be null" }
+
+                val newImg = tmp.getElementsByTag("img").firstOrNull()
+                requireNotNull(newImg) { "New image should not be null" }
+
+                for (attr in prevImg.attributes()) {
+                    if (attr.value.isEmpty()) {
+                        continue
+                    }
+
+                    if (attr.key == "src" || attr.key == "srcset" || IMAGE_FILE_REGEX.containsMatchIn(attr.value)) {
+                        if (newImg.attr(attr.key) == attr.value) {
+                            continue
+                        }
+
+                        var attrName = attr.key
+                        if (newImg.hasAttr(attrName)) {
+                            attrName = "data-old-$attrName"
+                        }
+                        newImg.attr(attrName, attr.value)
+                    }
+                }
+
+                prevElement.replaceWith(newImg)
+                noscript.remove()
+            }
         }
     }
 }
