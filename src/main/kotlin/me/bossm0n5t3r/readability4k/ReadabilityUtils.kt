@@ -1039,4 +1039,89 @@ object ReadabilityUtils {
             }
         }
     }
+
+    fun getArticleMetadata(
+        doc: Document,
+        jsonld: Map<String, String>,
+    ): Map<String, String?> {
+        val metadata = mutableMapOf<String, String?>()
+        val values = mutableMapOf<String, String>()
+        val metaElements = doc.getElementsByTag("meta")
+
+        metaElements.forEach { element ->
+            val content = element.attr("content")
+            if (content.isBlank()) {
+                return@forEach
+            }
+
+            val elementProperty = element.attr("property")
+            val elementName = element.attr("name")
+            var matches: MatchResult? = null
+            var name: String? = null
+
+            if (elementProperty.isNotBlank()) {
+                matches = Regexps.PROPERTY_PATTERN.find(elementProperty)
+                if (matches != null) {
+                    name =
+                        matches.groupValues
+                            .first()
+                            .lowercase()
+                            .replace("\\s".toRegex(), "")
+                    values[name] = content.trim()
+                }
+            }
+
+            if (matches == null && elementName.isNotBlank() && Regexps.NAME_PATTERN.containsMatchIn(elementName)) {
+                name = elementName.lowercase().replace("\\s".toRegex(), "").replace(".", ":")
+                values[name] = content.trim()
+            }
+        }
+
+        val title =
+            jsonld["title"]
+                ?: values["dc:title"]
+                ?: values["dcterm:title"]
+                ?: values["og:title"]
+                ?: values["weibo:article:title"]
+                ?: values["weibo:webpage:title"]
+                ?: values["title"]
+                ?: values["twitter:title"]
+                ?: values["parsely-title"]
+                ?: getArticleTitle(doc)
+
+        val articleAuthor = values["article:author"]?.takeIf { !isUrl(it) }
+
+        val byline =
+            jsonld["byline"]
+                ?: values["dc:creator"]
+                ?: values["dcterm:creator"]
+                ?: values["author"]
+                ?: values["parsely-author"]
+                ?: articleAuthor
+
+        val excerpt =
+            jsonld["excerpt"]
+                ?: values["dc:description"]
+                ?: values["dcterm:description"]
+                ?: values["og:description"]
+                ?: values["weibo:article:description"]
+                ?: values["weibo:webpage:description"]
+                ?: values["description"]
+                ?: values["twitter:description"]
+
+        val siteName = jsonld["siteName"] ?: values["og:site_name"]
+
+        val publishedTime =
+            jsonld["datePublished"]
+                ?: values["article:published_time"]
+                ?: values["parsely-pub-date"]
+
+        metadata["title"] = unescapeHtmlEntities(title)
+        metadata["byline"] = unescapeHtmlEntities(byline)
+        metadata["excerpt"] = unescapeHtmlEntities(excerpt)
+        metadata["siteName"] = unescapeHtmlEntities(siteName)
+        metadata["publishedTime"] = unescapeHtmlEntities(publishedTime)
+
+        return metadata
+    }
 }
