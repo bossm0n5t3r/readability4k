@@ -131,4 +131,7 @@ object Regexps {
             """^\s*(?:(dc|dcterm|og|twitter|parsely|weibo:(article|webpage))\s*[-\\.:]\s*)?(author|creator|pub-date|description|title|site_name)\s*$""",
             RegexOption.IGNORE_CASE,
         )
+
+    val SCHEMA_DOT_ORG_REGEX = Regex("""^https?://schema\.org/?$""")
+    val CDATA_REGEX = Regex("""^\s*<!\[CDATA\[|]]>\s*$""")
 }
