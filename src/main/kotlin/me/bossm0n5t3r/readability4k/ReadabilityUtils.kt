@@ -1,5 +1,12 @@
 package me.bossm0n5t3r.readability4k
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import me.bossm0n5t3r.readability4k.Regexps.IMAGE_EXTENSION_REGEX
 import me.bossm0n5t3r.readability4k.Regexps.IMAGE_URL_REGEX
 import me.bossm0n5t3r.readability4k.Regexps.SRCSET_CANDIDATE_REGEX
@@ -1235,5 +1242,146 @@ object ReadabilityUtils {
 
             false
         }
+    }
+
+    val json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
+
+    private val SIMILARITY_THRESHOLD = 0.75.toBigDecimal()
+
+    fun getJSONLD(doc: Document): Map<String, String> {
+        val scripts = getAllNodesWithTag(doc, listOf("script"))
+
+        var metadata: MutableMap<String, String>? = null
+
+        for (jsonLdElement in scripts) {
+            if (metadata != null) break
+            if (jsonLdElement.attr("type") != "application/ld+json") {
+                continue
+            }
+
+            try {
+                val content = jsonLdElement.data().replace(Regexps.CDATA_REGEX, "")
+
+                var parsed = json.parseToJsonElement(content)
+
+                if (parsed is JsonArray) {
+                    parsed = parsed.firstOrNull { element ->
+                        (element as? JsonObject)
+                            ?.get("@type")
+                            ?.let { type ->
+                                (type as? JsonPrimitive)
+                                    ?.contentOrNull
+                                    ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) }
+                            }
+                            ?: false
+                    } ?: continue
+                }
+
+                if (parsed !is JsonObject) continue
+
+                val matches =
+                    when (val context = parsed["@context"]) {
+                        is JsonPrimitive -> context.contentOrNull?.let { Regexps.SCHEMA_DOT_ORG_REGEX.containsMatchIn(it) } == true
+                        is JsonObject -> {
+                            val vocab = context["@vocab"]
+                            vocab is JsonPrimitive && vocab.contentOrNull?.let { Regexps.SCHEMA_DOT_ORG_REGEX.containsMatchIn(it) } == true
+                        }
+                        else -> false
+                    }
+
+                if (!matches) continue
+
+                var finalParsed = parsed
+                if (parsed["@type"] == null && parsed["@graph"] is JsonArray) {
+                    finalParsed = (parsed["@graph"] as JsonArray)
+                        .firstOrNull { element ->
+                            val typeContentOrEmpty =
+                                (element as? JsonObject)
+                                    ?.get("@type")
+                                    ?.let { it as? JsonPrimitive }
+                                    ?.contentOrNull
+                                    ?: ""
+                            Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(typeContentOrEmpty)
+                        }?.jsonObject ?: continue
+                }
+
+                val typeMatches =
+                    (finalParsed["@type"] as? JsonPrimitive)
+                        ?.contentOrNull
+                        ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) }
+                        ?: false
+
+                if (!typeMatches) continue
+
+                metadata = mutableMapOf()
+
+                val name = finalParsed["name"]?.jsonPrimitive?.contentOrNull
+                val headline = finalParsed["headline"]?.jsonPrimitive?.contentOrNull
+
+                if (name != null && headline != null && name != headline) {
+                    val title = getArticleTitle(doc)
+                    val nameMatches = textSimilarity(name, title) > SIMILARITY_THRESHOLD
+                    val headlineMatches = textSimilarity(headline, title) > SIMILARITY_THRESHOLD
+
+                    metadata["title"] =
+                        when {
+                            headlineMatches && !nameMatches -> headline
+                            else -> name
+                        }
+                } else if (name != null) {
+                    metadata["title"] = name.trim()
+                } else if (headline != null) {
+                    metadata["title"] = headline.trim()
+                }
+
+                when (val author = finalParsed["author"]) {
+                    is JsonObject -> {
+                        author["name"]?.jsonPrimitive?.contentOrNull?.let {
+                            metadata["byline"] = it.trim()
+                        }
+                    }
+                    is JsonArray -> {
+                        val authors =
+                            author
+                                .mapNotNull {
+                                    (it as? JsonObject)
+                                        ?.get("name")
+                                        ?.jsonPrimitive
+                                        ?.contentOrNull
+                                        ?.trim()
+                                }.filter { it.isNotEmpty() }
+
+                        if (authors.isNotEmpty()) {
+                            metadata["byline"] = authors.joinToString(", ")
+                        }
+                    }
+
+                    else -> {}
+                }
+
+                finalParsed["description"]?.jsonPrimitive?.contentOrNull?.let {
+                    metadata["excerpt"] = it.trim()
+                }
+
+                val publisher = finalParsed["publisher"]
+                if (publisher is JsonObject) {
+                    publisher["name"]?.jsonPrimitive?.contentOrNull?.let {
+                        metadata["siteName"] = it.trim()
+                    }
+                }
+
+                finalParsed["datePublished"]?.jsonPrimitive?.contentOrNull?.let {
+                    metadata["datePublished"] = it.trim()
+                }
+            } catch (e: Exception) {
+                LOGGER.warn("Failed to parse JSON-LD: ${e.message}")
+            }
+        }
+
+        return metadata ?: emptyMap()
     }
 }
