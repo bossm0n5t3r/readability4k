@@ -152,13 +152,9 @@ object ReadabilityUtils {
 
     fun removeNodes(
         elements: Elements,
-        filterFn: ((Node) -> Boolean)? = null,
-    ) = removeNodes(elements.toList(), filterFn)
-
-    fun removeNodes(
-        nodeList: List<Node>,
-        filterFn: ((Node) -> Boolean)? = null,
+        filterFn: ((Element) -> Boolean)? = null,
     ) {
+        val nodeList = elements.toList()
         if (filterFn == null) {
             nodeList.forEach { it.remove() }
             return
@@ -220,10 +216,10 @@ object ReadabilityUtils {
         flags: Int,
     ) {
         val headingNodes = getAllNodesWithTag(element, listOf("h1", "h2"))
-        removeNodes(headingNodes) { node ->
-            val shouldRemove = getClassWeight(node as Element, flags) < 0
+        removeNodes(headingNodes) { element ->
+            val shouldRemove = getClassWeight(element, flags) < 0
             if (shouldRemove) {
-                LOGGER.info("Removing header with low class weight: {}", node)
+                LOGGER.info("Removing header with low class weight: {}", element)
             }
             shouldRemove
         }
@@ -784,9 +780,7 @@ object ReadabilityUtils {
     ) {
         val isEmbed = tag in setOf("object", "embed", "iframe")
 
-        removeNodes(getAllNodesWithTag(e, listOf(tag))) { node ->
-            val element = node as Element
-
+        removeNodes(getAllNodesWithTag(e, listOf(tag))) { element ->
             if (isEmbed) {
                 if (element.attributes().any { allowedVideoRegex.containsMatchIn(it.value) }) {
                     return@removeNodes false
