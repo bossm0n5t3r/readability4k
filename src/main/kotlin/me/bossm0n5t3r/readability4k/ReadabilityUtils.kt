@@ -1118,4 +1118,122 @@ object ReadabilityUtils {
 
         return metadata
     }
+
+    fun cleanConditionally(
+        e: Element,
+        tag: String,
+        flags: Int,
+        allowedVideoRegex: Regex,
+        linkDensityModifier: BigDecimal,
+    ) {
+        if (!flagIsActive(flags, FLAG_CLEAN_CONDITIONALLY)) {
+            return
+        }
+
+        val isDataTable: (Element) -> Boolean = { element ->
+            element.hasAttr("_readabilityDataTable")
+        }
+
+        removeNodes(getAllNodesWithTag(e, listOf(tag))) { element ->
+            if (tag == "table" && isDataTable(element)) return@removeNodes false
+            if (hasAncestorTag(element, "table", -1) { isDataTable(it) }) return@removeNodes false
+            if (hasAncestorTag(element, "code")) return@removeNodes false
+            if (element.getElementsByTag("table").any { isDataTable(it) }) return@removeNodes false
+
+            val weight = getClassWeight(element, flags)
+            if (weight < 0) {
+                return@removeNodes true
+            }
+
+            if (getCharCount(element, ",") < 10) {
+                var isList = tag == "ul" || tag == "ol"
+                if (!isList) {
+                    val listLength =
+                        getAllNodesWithTag(element, listOf("ul", "ol"))
+                            .sumOf { getInnerText(it).length }
+                    val elementTextLength = getInnerText(element).length
+                    if (elementTextLength > 0) {
+                        isList = listLength.toDouble() / elementTextLength > 0.9
+                    }
+                }
+
+                val pCount = element.getElementsByTag("p").size
+                val imgCount = element.getElementsByTag("img").size
+                val liCount = element.getElementsByTag("li").size - 100
+                val inputCount = element.getElementsByTag("input").size
+                val headingDensity = getTextDensity(element, listOf("h1", "h2", "h3", "h4", "h5", "h6"))
+                val innerText = getInnerText(element)
+
+                var embedCount = 0
+                val embeds = getAllNodesWithTag(element, listOf("object", "embed", "iframe"))
+                for (embed in embeds) {
+                    val hasAllowedVideo =
+                        embed.attributes().any { allowedVideoRegex.containsMatchIn(it.value) } ||
+                            (embed.tagName() == "object" && allowedVideoRegex.containsMatchIn(embed.html()))
+                    if (hasAllowedVideo) {
+                        return@removeNodes false
+                    }
+                    embedCount++
+                }
+
+                if (Regexps.AD_WORDS.containsMatchIn(innerText) || Regexps.LOADING_WORDS.containsMatchIn(innerText)) {
+                    return@removeNodes true
+                }
+
+                val contentLength = innerText.length
+                val linkDensity = getLinkDensity(element)
+                val textishTags = listOf("span", "li", "td") + DIV_TO_P_ELEMS
+                val textDensity = getTextDensity(element, textishTags)
+                val isFigureChild = hasAncestorTag(element, "figure")
+
+                val shouldRemove =
+                    run {
+                        val errors = mutableListOf<String>()
+
+                        if (!isFigureChild && imgCount > 1 && (pCount.toDouble() / imgCount) < 0.5) {
+                            errors.add("Bad p to img ratio (img=$imgCount, p=$pCount)")
+                        }
+                        if (!isList && liCount > pCount) {
+                            errors.add("Too many li's outside of a list. (li=$liCount > p=$pCount)")
+                        }
+                        if (inputCount > (pCount / 3)) {
+                            errors.add("Too many inputs per p. (input=$inputCount, p=$pCount)")
+                        }
+                        if (!isList && !isFigureChild && headingDensity < 0.9.toBigDecimal() && contentLength < 25 &&
+                            (imgCount == 0 || imgCount > 2) &&
+                            linkDensity > BigDecimal.ZERO
+                        ) {
+                            errors.add("Suspiciously short. (headingDensity=$headingDensity, img=$imgCount, linkDensity=$linkDensity)")
+                        }
+                        if (!isList && weight < 25 && linkDensity > (0.2.toBigDecimal() + linkDensityModifier)) {
+                            errors.add("Low weight and a little linky. (linkDensity=$linkDensity)")
+                        }
+                        if (weight >= 25 && linkDensity > (0.5.toBigDecimal() + linkDensityModifier)) {
+                            errors.add("High weight and mostly links. (linkDensity=$linkDensity)")
+                        }
+                        if ((embedCount == 1 && contentLength < 75) || embedCount > 1) {
+                            errors.add("Suspicious embed. (embedCount=$embedCount, contentLength=$contentLength)")
+                        }
+                        if (imgCount == 0 && textDensity == BigDecimal.ZERO) {
+                            errors.add("No useful content. (img=0, textDensity=$textDensity)")
+                        }
+
+                        errors.isNotEmpty()
+                    }
+
+                if (shouldRemove && isList) {
+                    val isSimpleImageList =
+                        element.children().all { it.childrenSize() <= 1 } &&
+                            element.getElementsByTag("li").size == imgCount
+                    if (isSimpleImageList) {
+                        return@removeNodes false
+                    }
+                }
+
+                return@removeNodes shouldRemove
+            }
+
+            false
+        }
+    }
 }
