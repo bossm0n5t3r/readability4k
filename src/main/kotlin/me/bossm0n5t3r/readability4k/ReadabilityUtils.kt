@@ -54,6 +54,8 @@ object ReadabilityUtils {
 
     fun Elements.everyNode(predicate: (Element) -> Boolean): Boolean = this.all(predicate)
 
+    fun List<Node>.everyNode(predicate: (Node) -> Boolean): Boolean = this.all(predicate)
+
     fun Elements.someNode(predicate: (Element) -> Boolean): Boolean = this.any(predicate)
 
     /**
@@ -1383,5 +1385,82 @@ object ReadabilityUtils {
         }
 
         return metadata ?: emptyMap()
+    }
+
+    fun prepArticle(
+        articleContent: Element,
+        flags: Int,
+        allowedVideoRegex: Regex,
+        linkDensityModifier: BigDecimal,
+    ) {
+        cleanStyles(articleContent)
+        markDataTables(articleContent)
+        fixLazyImages(articleContent)
+
+        cleanConditionally(articleContent, "form", flags, allowedVideoRegex, linkDensityModifier)
+        cleanConditionally(articleContent, "fieldset", flags, allowedVideoRegex, linkDensityModifier)
+        clean(articleContent, "object", allowedVideoRegex)
+        clean(articleContent, "embed", allowedVideoRegex)
+        clean(articleContent, "footer", allowedVideoRegex)
+        clean(articleContent, "link", allowedVideoRegex)
+        clean(articleContent, "aside", allowedVideoRegex)
+
+        val shareElementThreshold = DEFAULT_CHAR_THRESHOLD
+
+        articleContent.children().forEach { topCandidate ->
+            cleanMatchedNodes(topCandidate) { node, matchString ->
+                Regexps.SHARE_ELEMENTS.containsMatchIn(matchString) &&
+                    node.text().length < shareElementThreshold
+            }
+        }
+
+        clean(articleContent, "iframe", allowedVideoRegex)
+        clean(articleContent, "input", allowedVideoRegex)
+        clean(articleContent, "textarea", allowedVideoRegex)
+        clean(articleContent, "select", allowedVideoRegex)
+        clean(articleContent, "button", allowedVideoRegex)
+        cleanHeaders(articleContent, flags)
+
+        cleanConditionally(articleContent, "table", flags, allowedVideoRegex, linkDensityModifier)
+        cleanConditionally(articleContent, "ul", flags, allowedVideoRegex, linkDensityModifier)
+        cleanConditionally(articleContent, "div", flags, allowedVideoRegex, linkDensityModifier)
+
+        replaceNodeTags(getAllNodesWithTag(articleContent, listOf("h1")), "h2")
+
+        removeNodes(getAllNodesWithTag(articleContent, listOf("p"))) { paragraph ->
+            val contentElementCount = getAllNodesWithTag(paragraph, listOf("img", "embed", "object", "iframe")).size
+            contentElementCount == 0 && getInnerText(paragraph, normalizeSpaces = false).isEmpty()
+        }
+
+        getAllNodesWithTag(articleContent, listOf("br")).forEach { br ->
+            val next = nextNode(br.nextElementSibling())
+            if (next != null && next is Element && next.tagName() == "p") {
+                br.remove()
+            }
+        }
+
+        getAllNodesWithTag(articleContent, listOf("table")).forEach { table ->
+            val tbody =
+                if (hasSingleTagInsideElement(table, "tbody")) {
+                    table.firstElementChild()
+                } else {
+                    table
+                } ?: return@forEach
+
+            if (hasSingleTagInsideElement(tbody, "tr")) {
+                val row = tbody.firstElementChild() ?: return@forEach
+                if (hasSingleTagInsideElement(row, "td")) {
+                    val cell = row.firstElementChild() ?: return@forEach
+                    val newTag =
+                        if (cell.childNodes().everyNode(::isPhrasingContent)) {
+                            "p"
+                        } else {
+                            "div"
+                        }
+                    val replacementCell = setNodeTag(cell, newTag)
+                    table.replaceWith(replacementCell)
+                }
+            }
+        }
     }
 }
