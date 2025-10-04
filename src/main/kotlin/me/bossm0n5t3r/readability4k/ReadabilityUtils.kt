@@ -1461,9 +1461,13 @@ object ReadabilityUtils {
         }
     }
 
-    private fun Element.getContentScore(): Double = this.attr("data-readability-content-score").toDoubleOrNull() ?: 0.0
+    private const val DATA_READABILITY_CONTENT_SCORE = "data-readability-content-score"
+
+    private fun Element.hasContentScore(): Boolean = this.hasAttr(DATA_READABILITY_CONTENT_SCORE)
+
+    private fun Element.getContentScore(): Double = this.attr(DATA_READABILITY_CONTENT_SCORE).toDoubleOrNull() ?: 0.0
 
     private fun Element.setContentScore(score: Double = 0.0) {
-        this.attr("data-readability-content-score", score.toString())
+        this.attr(DATA_READABILITY_CONTENT_SCORE, score.toString())
     }
 }
