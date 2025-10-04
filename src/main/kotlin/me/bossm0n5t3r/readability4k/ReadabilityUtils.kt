@@ -861,7 +861,7 @@ object ReadabilityUtils {
         node: Element,
         p: ReadabilityProperties,
     ) {
-        node.attr("data-readability-content-score", "0")
+        node.setContentScore()
 
         val tagName = node.tagName().uppercase()
 
@@ -874,7 +874,7 @@ object ReadabilityUtils {
                 else -> 0
             } + getClassWeight(node, p)
 
-        node.attr("data-readability-content-score", contentScore.toString())
+        node.setContentScore(contentScore.toDouble())
     }
 
     fun markDataTables(root: Element) {
@@ -1459,5 +1459,13 @@ object ReadabilityUtils {
                 }
             }
         }
+    }
+
+    private fun Element.getContentScore(): Double {
+        return this.attr("data-readability-content-score").toDoubleOrNull() ?: 0.0
+    }
+
+    private fun Element.setContentScore(score: Double = 0.0) {
+        this.attr("data-readability-content-score", score.toString())
     }
 }
