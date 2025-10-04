@@ -861,7 +861,7 @@ object ReadabilityUtils {
         node: Element,
         p: ReadabilityProperties,
     ) {
-        node.attr("data-readability-score", "0")
+        node.attr("data-readability-content-score", "0")
 
         val tagName = node.tagName().uppercase()
 
@@ -874,7 +874,7 @@ object ReadabilityUtils {
                 else -> 0
             } + getClassWeight(node, p)
 
-        node.attr("data-readability-score", contentScore.toString())
+        node.attr("data-readability-content-score", contentScore.toString())
     }
 
     fun markDataTables(root: Element) {
