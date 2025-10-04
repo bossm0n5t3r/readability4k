@@ -7,9 +7,9 @@ import java.math.BigDecimal
 data class ReadabilityProperties(
     val document: Document,
     val articleTitle: String,
-    val articleByline: String? = null,
-    val articleLang: String,
-    val articleDir: String? = null,
+    var articleByline: String? = null,
+    var articleLang: String? = null,
+    var articleDir: String? = null,
     val articleSiteName: String? = null,
     val attempts: MutableList<Attempt> = mutableListOf(),
     val metadata: Map<String, String> = mutableMapOf(),
