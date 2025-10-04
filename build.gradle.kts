@@ -19,6 +19,7 @@ dependencies {
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.kotest.framework.engine)
     testImplementation(libs.kotest.runner.junit5)
+    testImplementation(libs.mockk)
 }
 
 tasks.test {
