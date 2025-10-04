@@ -403,7 +403,7 @@ object ReadabilityUtils {
 
         PRESENTATIONAL_ATTRIBUTES.forEach { element.removeAttr(it) }
 
-        if (DEPRECATED_SIZE_ATTRIBUTE_ELEMS.contains(element.tagName().lowercase())) {
+        if (DEPRECATED_SIZE_ATTRIBUTE_ELEMS.contains(element.tagName())) {
             element.removeAttr("width")
             element.removeAttr("height")
         }
