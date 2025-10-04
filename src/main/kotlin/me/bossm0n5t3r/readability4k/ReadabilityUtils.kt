@@ -1134,8 +1134,6 @@ object ReadabilityUtils {
         e: Element,
         tag: String,
         p: ReadabilityProperties,
-        allowedVideoRegex: Regex,
-        linkDensityModifier: BigDecimal,
     ) {
         if (!flagIsActive(p, FLAG_CLEAN_CONDITIONALLY)) {
             return
@@ -1179,8 +1177,8 @@ object ReadabilityUtils {
                 val embeds = getAllNodesWithTag(element, listOf("object", "embed", "iframe"))
                 for (embed in embeds) {
                     val hasAllowedVideo =
-                        embed.attributes().any { allowedVideoRegex.containsMatchIn(it.value) } ||
-                            (embed.tagName() == "object" && allowedVideoRegex.containsMatchIn(embed.html()))
+                        embed.attributes().any { p.allowedVideoRegex.containsMatchIn(it.value) } ||
+                            (embed.tagName() == "object" && p.allowedVideoRegex.containsMatchIn(embed.html()))
                     if (hasAllowedVideo) {
                         return@removeNodes false
                     }
@@ -1216,10 +1214,10 @@ object ReadabilityUtils {
                         ) {
                             errors.add("Suspiciously short. (headingDensity=$headingDensity, img=$imgCount, linkDensity=$linkDensity)")
                         }
-                        if (!isList && weight < 25 && linkDensity > (0.2.toBigDecimal() + linkDensityModifier)) {
+                        if (!isList && weight < 25 && linkDensity > (0.2.toBigDecimal() + p.linkDensityModifier)) {
                             errors.add("Low weight and a little linky. (linkDensity=$linkDensity)")
                         }
-                        if (weight >= 25 && linkDensity > (0.5.toBigDecimal() + linkDensityModifier)) {
+                        if (weight >= 25 && linkDensity > (0.5.toBigDecimal() + p.linkDensityModifier)) {
                             errors.add("High weight and mostly links. (linkDensity=$linkDensity)")
                         }
                         if ((embedCount == 1 && contentLength < 75) || embedCount > 1) {
@@ -1399,8 +1397,8 @@ object ReadabilityUtils {
         markDataTables(articleContent)
         fixLazyImages(articleContent)
 
-        cleanConditionally(articleContent, "form", p, allowedVideoRegex, linkDensityModifier)
-        cleanConditionally(articleContent, "fieldset", p, allowedVideoRegex, linkDensityModifier)
+        cleanConditionally(articleContent, "form", p)
+        cleanConditionally(articleContent, "fieldset", p)
         clean(articleContent, "object", allowedVideoRegex)
         clean(articleContent, "embed", allowedVideoRegex)
         clean(articleContent, "footer", allowedVideoRegex)
@@ -1423,9 +1421,9 @@ object ReadabilityUtils {
         clean(articleContent, "button", allowedVideoRegex)
         cleanHeaders(articleContent, p)
 
-        cleanConditionally(articleContent, "table", p, allowedVideoRegex, linkDensityModifier)
-        cleanConditionally(articleContent, "ul", p, allowedVideoRegex, linkDensityModifier)
-        cleanConditionally(articleContent, "div", p, allowedVideoRegex, linkDensityModifier)
+        cleanConditionally(articleContent, "table", p)
+        cleanConditionally(articleContent, "ul", p)
+        cleanConditionally(articleContent, "div", p)
 
         replaceNodeTags(getAllNodesWithTag(articleContent, listOf("h1")), "h2")
 
