@@ -180,20 +180,22 @@ object ReadabilityUtils {
     }
 
     fun flagIsActive(
-        flags: Int,
+        p: ReadabilityProperties,
         flag: Int,
-    ): Boolean = (flags and flag) > 0
+    ): Boolean = (p.flags and flag) > 0
 
     fun removeFlag(
-        flags: Int,
+        p: ReadabilityProperties,
         flag: Int,
-    ) = flags and flag.inv()
+    ) {
+        p.flags = p.flags and flag.inv()
+    }
 
     fun getClassWeight(
         element: Element,
-        flags: Int,
+        p: ReadabilityProperties,
     ): Int {
-        if (flagIsActive(flags, FLAG_WEIGHT_CLASSES).not()) {
+        if (flagIsActive(p, FLAG_WEIGHT_CLASSES).not()) {
             return 0
         }
 
@@ -222,11 +224,11 @@ object ReadabilityUtils {
 
     fun cleanHeaders(
         element: Element,
-        flags: Int,
+        p: ReadabilityProperties,
     ) {
         val headingNodes = getAllNodesWithTag(element, listOf("h1", "h2"))
         removeNodes(headingNodes) { element ->
-            val shouldRemove = getClassWeight(element, flags) < 0
+            val shouldRemove = getClassWeight(element, p) < 0
             if (shouldRemove) {
                 LOGGER.info("Removing header with low class weight: {}", element)
             }
@@ -858,7 +860,7 @@ object ReadabilityUtils {
 
     fun initializeNode(
         node: Element,
-        flags: Int,
+        p: ReadabilityProperties,
     ) {
         node.attr("data-readability-score", "0")
 
@@ -871,7 +873,7 @@ object ReadabilityUtils {
                 "ADDRESS", "OL", "UL", "DL", "DD", "DT", "LI", "FORM" -> -3
                 "H1", "H2", "H3", "H4", "H5", "H6", "TH" -> -5
                 else -> 0
-            } + getClassWeight(node, flags)
+            } + getClassWeight(node, p)
 
         node.attr("data-readability-score", contentScore.toString())
     }
@@ -1131,11 +1133,11 @@ object ReadabilityUtils {
     fun cleanConditionally(
         e: Element,
         tag: String,
-        flags: Int,
+        p: ReadabilityProperties,
         allowedVideoRegex: Regex,
         linkDensityModifier: BigDecimal,
     ) {
-        if (!flagIsActive(flags, FLAG_CLEAN_CONDITIONALLY)) {
+        if (!flagIsActive(p, FLAG_CLEAN_CONDITIONALLY)) {
             return
         }
 
@@ -1149,7 +1151,7 @@ object ReadabilityUtils {
             if (hasAncestorTag(element, "code")) return@removeNodes false
             if (element.getElementsByTag("table").any { isDataTable(it) }) return@removeNodes false
 
-            val weight = getClassWeight(element, flags)
+            val weight = getClassWeight(element, p)
             if (weight < 0) {
                 return@removeNodes true
             }
@@ -1389,7 +1391,7 @@ object ReadabilityUtils {
 
     fun prepArticle(
         articleContent: Element,
-        flags: Int,
+        p: ReadabilityProperties,
         allowedVideoRegex: Regex,
         linkDensityModifier: BigDecimal,
     ) {
@@ -1397,8 +1399,8 @@ object ReadabilityUtils {
         markDataTables(articleContent)
         fixLazyImages(articleContent)
 
-        cleanConditionally(articleContent, "form", flags, allowedVideoRegex, linkDensityModifier)
-        cleanConditionally(articleContent, "fieldset", flags, allowedVideoRegex, linkDensityModifier)
+        cleanConditionally(articleContent, "form", p, allowedVideoRegex, linkDensityModifier)
+        cleanConditionally(articleContent, "fieldset", p, allowedVideoRegex, linkDensityModifier)
         clean(articleContent, "object", allowedVideoRegex)
         clean(articleContent, "embed", allowedVideoRegex)
         clean(articleContent, "footer", allowedVideoRegex)
@@ -1419,11 +1421,11 @@ object ReadabilityUtils {
         clean(articleContent, "textarea", allowedVideoRegex)
         clean(articleContent, "select", allowedVideoRegex)
         clean(articleContent, "button", allowedVideoRegex)
-        cleanHeaders(articleContent, flags)
+        cleanHeaders(articleContent, p)
 
-        cleanConditionally(articleContent, "table", flags, allowedVideoRegex, linkDensityModifier)
-        cleanConditionally(articleContent, "ul", flags, allowedVideoRegex, linkDensityModifier)
-        cleanConditionally(articleContent, "div", flags, allowedVideoRegex, linkDensityModifier)
+        cleanConditionally(articleContent, "table", p, allowedVideoRegex, linkDensityModifier)
+        cleanConditionally(articleContent, "ul", p, allowedVideoRegex, linkDensityModifier)
+        cleanConditionally(articleContent, "div", p, allowedVideoRegex, linkDensityModifier)
 
         replaceNodeTags(getAllNodesWithTag(articleContent, listOf("h1")), "h2")
 

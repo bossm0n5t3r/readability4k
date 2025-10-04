@@ -23,7 +23,7 @@ data class ReadabilityProperties(
     val disableJSONLD: String? = null,
     val allowedVideoRegex: Regex,
     val linkDensityModifier: BigDecimal,
-    val flags: Int,
+    var flags: Int,
 ) {
     data class Attempt(
         val articleContent: Element,
