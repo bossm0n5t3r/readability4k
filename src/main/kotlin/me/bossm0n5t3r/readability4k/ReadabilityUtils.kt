@@ -787,17 +787,17 @@ object ReadabilityUtils {
     fun clean(
         e: Element,
         tag: String,
-        allowedVideoRegex: Regex,
+        p: ReadabilityProperties,
     ) {
         val isEmbed = tag in setOf("object", "embed", "iframe")
 
         removeNodes(getAllNodesWithTag(e, listOf(tag))) { element ->
             if (isEmbed) {
-                if (element.attributes().any { allowedVideoRegex.containsMatchIn(it.value) }) {
+                if (element.attributes().any { p.allowedVideoRegex.containsMatchIn(it.value) }) {
                     return@removeNodes false
                 }
 
-                if (element.tagName() == "object" && allowedVideoRegex.containsMatchIn(element.html())) {
+                if (element.tagName() == "object" && p.allowedVideoRegex.containsMatchIn(element.html())) {
                     return@removeNodes false
                 }
             }
@@ -1390,8 +1390,6 @@ object ReadabilityUtils {
     fun prepArticle(
         articleContent: Element,
         p: ReadabilityProperties,
-        allowedVideoRegex: Regex,
-        linkDensityModifier: BigDecimal,
     ) {
         cleanStyles(articleContent)
         markDataTables(articleContent)
@@ -1399,11 +1397,11 @@ object ReadabilityUtils {
 
         cleanConditionally(articleContent, "form", p)
         cleanConditionally(articleContent, "fieldset", p)
-        clean(articleContent, "object", allowedVideoRegex)
-        clean(articleContent, "embed", allowedVideoRegex)
-        clean(articleContent, "footer", allowedVideoRegex)
-        clean(articleContent, "link", allowedVideoRegex)
-        clean(articleContent, "aside", allowedVideoRegex)
+        clean(articleContent, "object", p)
+        clean(articleContent, "embed", p)
+        clean(articleContent, "footer", p)
+        clean(articleContent, "link", p)
+        clean(articleContent, "aside", p)
 
         val shareElementThreshold = DEFAULT_CHAR_THRESHOLD
 
@@ -1414,11 +1412,11 @@ object ReadabilityUtils {
             }
         }
 
-        clean(articleContent, "iframe", allowedVideoRegex)
-        clean(articleContent, "input", allowedVideoRegex)
-        clean(articleContent, "textarea", allowedVideoRegex)
-        clean(articleContent, "select", allowedVideoRegex)
-        clean(articleContent, "button", allowedVideoRegex)
+        clean(articleContent, "iframe", p)
+        clean(articleContent, "input", p)
+        clean(articleContent, "textarea", p)
+        clean(articleContent, "select", p)
+        clean(articleContent, "button", p)
         cleanHeaders(articleContent, p)
 
         cleanConditionally(articleContent, "table", p)
