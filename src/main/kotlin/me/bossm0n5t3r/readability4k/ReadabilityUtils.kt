@@ -1470,4 +1470,463 @@ object ReadabilityUtils {
     private fun Element.setContentScore(score: Double = 0.0) {
         this.attr(DATA_READABILITY_CONTENT_SCORE, score.toString())
     }
+
+    fun grabArticle(
+        page: Element?,
+        p: ReadabilityProperties,
+    ): Element? {
+        LOGGER.info("**** grabArticle ****")
+        val document = p.document
+        val isPaging = page != null
+        val currentPage = page ?: document.body()
+
+        val pageCacheHtml = currentPage.html()
+
+        while (true) {
+            LOGGER.info("Starting grabArticle loop")
+            val stripUnlikelyCandidates = flagIsActive(p, FLAG_STRIP_UNLIKELYS)
+
+            val elementsToScore = mutableListOf<Element>()
+            var node: Element? = document.root()
+            var shouldRemoveTitleHeader = true
+
+            while (node != null) {
+                if (node.tagName() == "html") {
+                    p.articleLang = node.attr("lang")
+                }
+
+                val matchString = "${node.className()} ${node.id()}"
+
+                if (!isProbablyVisible(node)) {
+                    LOGGER.info("Removing hidden node - {}", matchString)
+                    node = removeAndGetNext(node)
+                    continue
+                }
+
+                if (node.attr("aria-modal") == "true" && node.attr("role") == "dialog") {
+                    node = removeAndGetNext(node)
+                    continue
+                }
+
+                if (p.articleByline.isNullOrEmpty() && p.metadata["byline"].isNullOrEmpty() && isValidByLine(node, matchString)) {
+                    val endOfSearchMarkerNode = getNextNode(node, true)
+                    var next = getNextNode(node)
+                    var itemPropNameNode: Element? = null
+
+                    while (next != null && next != endOfSearchMarkerNode) {
+                        val itemprop = next.attr("itemprop")
+                        if (itemprop.split(Regex("\\s+")).contains("name")) {
+                            itemPropNameNode = next
+                            break
+                        }
+                        next = getNextNode(next)
+                    }
+
+                    p.articleByline = (itemPropNameNode ?: node).text().trim()
+                    node = removeAndGetNext(node)
+                    continue
+                }
+
+                if (shouldRemoveTitleHeader && headerDuplicatesTitle(node, p)) {
+                    LOGGER.info("Removing header: {}, {}", node.text().trim(), p.articleTitle.trim())
+                    shouldRemoveTitleHeader = false
+                    node = removeAndGetNext(node)
+                    continue
+                }
+
+                if (stripUnlikelyCandidates) {
+                    if (Regexps.UNLIKELY_CANDIDATES.containsMatchIn(matchString) &&
+                        !Regexps.OK_MAYBE_ITS_A_CANDIDATE.containsMatchIn(matchString) &&
+                        !hasAncestorTag(node, "table") &&
+                        !hasAncestorTag(node, "code") &&
+                        node.tagName() != "body" &&
+                        node.tagName() != "a"
+                    ) {
+                        LOGGER.info("Removing unlikely candidate - {}", matchString)
+                        node = removeAndGetNext(node)
+                        continue
+                    }
+
+                    if (node.attr("role") in UNLIKELY_ROLES) {
+                        LOGGER.info("Removing content with role {} - {}", node.attr("role"), matchString)
+                        node = removeAndGetNext(node)
+                        continue
+                    }
+                }
+
+                if (node.tagName() in setOf("div", "section", "header", "h1", "h2", "h3", "h4", "h5", "h6") &&
+                    isElementWithoutContent(node)
+                ) {
+                    node = removeAndGetNext(node)
+                    continue
+                }
+
+                if (node.tagName() in DEFAULT_TAGS_TO_SCORE) {
+                    elementsToScore.add(node)
+                }
+
+                if (node.tagName() == "div") {
+                    var childNode: Node? = node.childNodes().firstOrNull()
+
+                    while (childNode != null) {
+                        val nextSibling = childNode.nextSibling()
+
+                        if (isPhrasingContent(childNode)) {
+                            val fragment = mutableListOf<Node>()
+                            var current: Node = childNode
+
+                            do {
+                                fragment.add(current)
+                                val next = current.nextSibling() ?: break
+                                if (!isPhrasingContent(next)) break
+                                current = next
+                            } while (true)
+
+                            while (fragment.isNotEmpty() && isWhiteSpace(fragment.first())) {
+                                fragment.removeFirst().remove()
+                            }
+                            while (fragment.isNotEmpty() && isWhiteSpace(fragment.last())) {
+                                fragment.removeLast().remove()
+                            }
+
+                            if (fragment.isNotEmpty()) {
+                                val p = document.createElement("p")
+                                fragment.forEach { fragmentNode ->
+                                    fragmentNode.remove()
+                                    p.appendChild(fragmentNode)
+                                }
+
+                                val insertBefore = current.nextSibling()
+                                if (insertBefore != null) {
+                                    insertBefore.before(p)
+                                } else {
+                                    node.appendChild(p)
+                                }
+                            }
+                            childNode = current.nextSibling()
+                        } else {
+                            childNode = nextSibling
+                        }
+                    }
+
+                    if (hasSingleTagInsideElement(node, "p") &&
+                        getLinkDensity(node) < 0.25.toBigDecimal()
+                    ) {
+                        val newNode = node.child(0)
+                        newNode.remove()
+                        node.replaceWith(newNode)
+                        node = newNode
+                        elementsToScore.add(node)
+                    } else if (!hasChildBlockElement(node)) {
+                        node = setNodeTag(node, "p")
+                        elementsToScore.add(node)
+                    }
+                }
+                node = getNextNode(node)
+            }
+
+            val candidates = mutableListOf<Element>()
+
+            elementsToScore.forEach { elementToScore ->
+                val parent = elementToScore.parent()
+                if (parent == null || parent.tagName().isBlank()) {
+                    return@forEach
+                }
+
+                val innerText = getInnerText(elementToScore)
+                if (innerText.length < 25) {
+                    return@forEach
+                }
+
+                val ancestors = getNodeAncestors(elementToScore, maxDepth = 5)
+                if (ancestors.isEmpty()) {
+                    return@forEach
+                }
+
+                var contentScore = 0.0
+                contentScore += 1
+                contentScore += innerText.split(Regexps.COMMAS).size
+                contentScore += minOf(innerText.length / 100, 3)
+
+                ancestors.forEachIndexed { level, ancestor ->
+                    if (ancestor.tagName().isEmpty() || ancestor.parent() == null || ancestor.parent()?.tagName().isNullOrBlank()) {
+                        return@forEachIndexed
+                    }
+
+                    if (!ancestor.hasContentScore()) {
+                        initializeNode(ancestor, p)
+                        candidates.add(ancestor)
+                    }
+
+                    val scoreDivider =
+                        when (level) {
+                            0 -> 1.0
+                            1 -> 2.0
+                            else -> (level * 3).toDouble()
+                        }
+
+                    val currentScore = ancestor.getContentScore()
+                    ancestor.setContentScore(currentScore + contentScore / scoreDivider)
+                }
+            }
+
+            val topCandidates = mutableListOf<Element>()
+
+            candidates.forEach { candidate ->
+                val candidateScore = candidate.getContentScore() * (1 - getLinkDensity(candidate).toDouble())
+                candidate.setContentScore(candidateScore)
+
+                LOGGER.info("Candidate: {} with score {}", candidate, candidateScore)
+
+                var inserted = false
+                for (i in 0 until minOf(p.nbTopCandidates, topCandidates.size)) {
+                    val topCandidate = topCandidates[i]
+                    val topCandidateContentScore = topCandidate.getContentScore()
+                    if (candidateScore > topCandidateContentScore) {
+                        topCandidates.add(i, candidate)
+                        inserted = true
+                        break
+                    }
+                }
+                if (!inserted && topCandidates.size < p.nbTopCandidates) {
+                    topCandidates.add(candidate)
+                }
+                if (topCandidates.size > p.nbTopCandidates) {
+                    topCandidates.removeLast()
+                }
+            }
+
+            var topCandidate = topCandidates.firstOrNull()
+            var neededToCreateTopCandidate = false
+            var parentOfTopCandidate: Element?
+
+            if (topCandidate == null || topCandidate.tagName() == "body") {
+                topCandidate = document.createElement("div")
+                neededToCreateTopCandidate = true
+
+                while (currentPage.childNodeSize() > 0) {
+                    val child = currentPage.childNode(0)
+                    LOGGER.info("Moving child out: {}", child)
+                    child.remove()
+                    topCandidate.appendChild(child)
+                }
+
+                currentPage.appendChild(topCandidate)
+                initializeNode(topCandidate, p)
+            } else {
+                val alternativeCandidateAncestors = mutableListOf<List<Element>>()
+                val topCandidateContentScore = topCandidate.getContentScore()
+
+                for (i in 1 until topCandidates.size) {
+                    val ithTopCandidate = topCandidates[i]
+                    val ithTopCandidateContentScore = ithTopCandidate.getContentScore()
+                    if (ithTopCandidateContentScore / topCandidateContentScore >= 0.75) {
+                        alternativeCandidateAncestors.add(getNodeAncestors(topCandidates[i]))
+                    }
+                }
+
+                val minimumTopCandidates = 3
+                if (alternativeCandidateAncestors.size >= minimumTopCandidates) {
+                    parentOfTopCandidate = topCandidate.parent()
+
+                    while (parentOfTopCandidate != null && parentOfTopCandidate.tagName() != "body") {
+                        var listsContainingThisAncestor = 0
+
+                        for (ancestors in alternativeCandidateAncestors) {
+                            if (parentOfTopCandidate in ancestors) {
+                                listsContainingThisAncestor++
+                            }
+                            if (listsContainingThisAncestor >= minimumTopCandidates) {
+                                break
+                            }
+                        }
+
+                        if (listsContainingThisAncestor >= minimumTopCandidates) {
+                            topCandidate = parentOfTopCandidate
+                            break
+                        }
+                        parentOfTopCandidate = parentOfTopCandidate.parent()
+                    }
+                }
+
+                if (topCandidate != null && !topCandidate.hasContentScore()) {
+                    initializeNode(topCandidate, p)
+                }
+
+                parentOfTopCandidate = topCandidate?.parent()
+                var lastScore = topCandidate?.getContentScore() ?: 0.0
+                val scoreThreshold = lastScore / 3
+
+                while (parentOfTopCandidate != null && parentOfTopCandidate.tagName() != "body") {
+                    if (!parentOfTopCandidate.hasContentScore()) {
+                        parentOfTopCandidate = parentOfTopCandidate.parent()
+                        continue
+                    }
+
+                    val parentScore = parentOfTopCandidate.getContentScore()
+                    if (parentScore < scoreThreshold) {
+                        break
+                    }
+                    if (parentScore > lastScore) {
+                        topCandidate = parentOfTopCandidate
+                        break
+                    }
+                    lastScore = parentOfTopCandidate.getContentScore()
+                    parentOfTopCandidate = parentOfTopCandidate.parent()
+                }
+
+                parentOfTopCandidate = topCandidate?.parent()
+                while (parentOfTopCandidate != null &&
+                    parentOfTopCandidate.tagName() != "body" &&
+                    parentOfTopCandidate.childrenSize() == 1
+                ) {
+                    topCandidate = parentOfTopCandidate
+                    parentOfTopCandidate = topCandidate.parent()
+                }
+
+                if (topCandidate != null && !topCandidate.hasContentScore()) {
+                    initializeNode(topCandidate, p)
+                }
+            }
+
+            var articleContent = document.createElement("div")
+            if (isPaging) {
+                articleContent.id("readability-content")
+            }
+
+            val siblingScoreThreshold =
+                maxOf(
+                    10.0,
+                    (topCandidate?.getContentScore() ?: 0.0) * 0.2,
+                )
+            parentOfTopCandidate = topCandidate?.parent()
+
+            val siblings = parentOfTopCandidate?.children()?.toList() ?: emptyList()
+
+            siblings.forEach { sibling ->
+                var append = false
+
+                LOGGER.info("Looking at sibling node: {}", sibling)
+                val siblingContentScore = sibling.getContentScore()
+                LOGGER.info("Sibling has score {}", siblingContentScore)
+
+                if (sibling === topCandidate) {
+                    append = true
+                } else {
+                    var contentBonus = 0.0
+
+                    if (sibling.className() == topCandidate?.className() && topCandidate.className().isNotEmpty()) {
+                        contentBonus += topCandidate.getContentScore() * 0.2
+                    }
+
+                    if (sibling.hasContentScore() && sibling.getContentScore() + contentBonus >= siblingScoreThreshold) {
+                        append = true
+                    } else if (sibling.tagName() == "p") {
+                        val linkDensity = getLinkDensity(sibling)
+                        val nodeContent = getInnerText(sibling)
+                        val nodeLength = nodeContent.length
+
+                        if (nodeLength > 80 && linkDensity < 0.25.toBigDecimal()) {
+                            append = true
+                        } else if (nodeLength in 1..<80 && linkDensity == BigDecimal.ZERO &&
+                            Regex("""\.\s|\.$""").containsMatchIn(nodeContent)
+                        ) {
+                            append = true
+                        }
+                    }
+                }
+
+                if (append) {
+                    LOGGER.info("Appending node: {}", sibling)
+
+                    val nodeToAppend =
+                        if (sibling.tagName() !in ALTER_TO_DIV_EXCEPTIONS) {
+                            LOGGER.info("Altering sibling: {} to div.", sibling)
+                            setNodeTag(sibling, "div")
+                        } else {
+                            sibling
+                        }
+
+                    nodeToAppend.remove()
+                    articleContent.appendChild(nodeToAppend)
+                }
+            }
+
+            if (p.debug) {
+                LOGGER.info("Article content pre-prep: {}", articleContent.html())
+            }
+
+            prepArticle(articleContent, p)
+
+            if (p.debug) {
+                LOGGER.info("Article content post-prep: {}", articleContent.html())
+            }
+
+            if (neededToCreateTopCandidate) {
+                topCandidate?.id("readability-page-1")
+                topCandidate?.addClass("page")
+            } else {
+                val div = document.createElement("div")
+                div.id("readability-page-1")
+                div.addClass("page")
+
+                while (articleContent.childrenSize() > 0) {
+                    val firstChild = articleContent.child(0)
+                    firstChild.remove()
+                    div.appendChild(firstChild)
+                }
+                articleContent.appendChild(div)
+            }
+
+            if (p.debug) {
+                LOGGER.info("Article content after paging: {}", articleContent.html())
+            }
+
+            var parseSuccessful = true
+            val textLength = getInnerText(articleContent, true).length
+
+            if (textLength < p.charThreshold) {
+                parseSuccessful = false
+                currentPage.html(pageCacheHtml)
+
+                p.attempts.add(ReadabilityProperties.Attempt(articleContent, textLength))
+
+                if (flagIsActive(p, FLAG_STRIP_UNLIKELYS)) {
+                    removeFlag(p, FLAG_STRIP_UNLIKELYS)
+                } else if (flagIsActive(p, FLAG_WEIGHT_CLASSES)) {
+                    removeFlag(p, FLAG_WEIGHT_CLASSES)
+                } else if (flagIsActive(p, FLAG_CLEAN_CONDITIONALLY)) {
+                    removeFlag(p, FLAG_CLEAN_CONDITIONALLY)
+                } else {
+                    p.attempts.sortByDescending { it.textLength }
+
+                    if (p.attempts.firstOrNull()?.textLength == 0) {
+                        return null
+                    }
+
+                    articleContent = p.attempts.first().articleContent
+                    parseSuccessful = true
+                }
+            }
+
+            if (parseSuccessful) {
+                val ancestors =
+                    listOfNotNull(parentOfTopCandidate, topCandidate) +
+                        (parentOfTopCandidate?.let { getNodeAncestors(it) } ?: emptyList())
+
+                for (ancestor in ancestors) {
+                    if (ancestor.tagName().isEmpty()) {
+                        continue
+                    }
+                    val dir = ancestor.attr("dir")
+                    if (dir.isNotEmpty()) {
+                        p.articleDir = dir
+                        break
+                    }
+                }
+
+                return articleContent
+            }
+        }
+    }
 }
