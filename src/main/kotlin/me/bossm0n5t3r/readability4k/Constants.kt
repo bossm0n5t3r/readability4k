@@ -17,15 +17,15 @@ const val DEFAULT_CHAR_THRESHOLD = 500
 // Element tags to score by default
 val DEFAULT_TAGS_TO_SCORE =
     setOf(
-        "SECTION",
-        "H2",
-        "H3",
-        "H4",
-        "H5",
-        "H6",
-        "P",
-        "TD",
-        "PRE",
+        "section",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "p",
+        "td",
+        "pre",
     )
 
 // Roles that are unlikely to contain article content
