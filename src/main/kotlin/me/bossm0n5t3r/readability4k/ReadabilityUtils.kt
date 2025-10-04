@@ -149,14 +149,14 @@ object ReadabilityUtils {
 
     fun headerDuplicatesTitle(
         element: Element,
-        articleTitle: String,
+        p: ReadabilityProperties,
     ): Boolean {
         if (element.tagName() != "H1" && element.tagName() != "H2") {
             return false
         }
         val heading = getInnerText(element, false)
-        LOGGER.info("Evaluating similarity of header: {}, articleTitle: {}", heading, articleTitle)
-        return textSimilarity(articleTitle, heading) > BigDecimal.valueOf(0.75)
+        LOGGER.info("Evaluating similarity of header: {}, articleTitle: {}", heading, p.articleTitle)
+        return textSimilarity(p.articleTitle, heading) > BigDecimal.valueOf(0.75)
     }
 
     fun removeNodes(

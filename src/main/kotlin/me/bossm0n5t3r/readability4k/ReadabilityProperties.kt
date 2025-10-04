@@ -6,7 +6,7 @@ import java.math.BigDecimal
 
 data class ReadabilityProperties(
     val document: Document,
-    val articleTitle: String? = null,
+    val articleTitle: String,
     val articleByline: String? = null,
     val articleLang: String,
     val articleDir: String? = null,
