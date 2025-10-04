@@ -156,7 +156,11 @@ object ReadabilityUtils {
         }
         val heading = getInnerText(element, false)
         LOGGER.info("Evaluating similarity of header: {}, articleTitle: {}", heading, p.articleTitle)
-        return textSimilarity(p.articleTitle, heading) > BigDecimal.valueOf(0.75)
+        val articleTitleInProperties =
+            requireNotNull(p.articleTitle) {
+                "articleTitle should not be null"
+            }
+        return textSimilarity(articleTitleInProperties, heading) > BigDecimal.valueOf(0.75)
     }
 
     fun removeNodes(
@@ -640,7 +644,9 @@ object ReadabilityUtils {
         }
     }
 
-    fun getArticleTitle(document: Document): String {
+    fun getArticleTitle(p: ReadabilityProperties): String {
+        val document = p.document
+
         fun wordCount(str: String): Int = if (str.trim().isEmpty()) 0 else str.split(Regex("\\s+")).size
 
         var curTitle = ""
@@ -1045,12 +1051,12 @@ object ReadabilityUtils {
     }
 
     fun getArticleMetadata(
-        doc: Document,
         jsonld: Map<String, String>,
-    ): Map<String, String?> {
+        p: ReadabilityProperties,
+    ): MutableMap<String, String?> {
         val metadata = mutableMapOf<String, String?>()
         val values = mutableMapOf<String, String>()
-        val metaElements = doc.getElementsByTag("meta")
+        val metaElements = p.document.getElementsByTag("meta")
 
         metaElements.forEach { element ->
             val content = element.attr("content")
@@ -1091,7 +1097,7 @@ object ReadabilityUtils {
                 ?: values["title"]
                 ?: values["twitter:title"]
                 ?: values["parsely-title"]
-                ?: getArticleTitle(doc)
+                ?: getArticleTitle(p)
 
         val articleAuthor = values["article:author"]?.takeIf { !isUrl(it) }
 
@@ -1253,7 +1259,8 @@ object ReadabilityUtils {
 
     private val SIMILARITY_THRESHOLD = 0.75.toBigDecimal()
 
-    fun getJSONLD(doc: Document): Map<String, String> {
+    fun getJSONLD(p: ReadabilityProperties): Map<String, String> {
+        val doc = p.document
         val scripts = getAllNodesWithTag(doc, listOf("script"))
 
         var metadata: MutableMap<String, String>? = null
@@ -1324,7 +1331,7 @@ object ReadabilityUtils {
                 val headline = finalParsed["headline"]?.jsonPrimitive?.contentOrNull
 
                 if (name != null && headline != null && name != headline) {
-                    val title = getArticleTitle(doc)
+                    val title = getArticleTitle(p)
                     val nameMatches = textSimilarity(name, title) > SIMILARITY_THRESHOLD
                     val headlineMatches = textSimilarity(headline, title) > SIMILARITY_THRESHOLD
 
@@ -1472,7 +1479,7 @@ object ReadabilityUtils {
     }
 
     fun grabArticle(
-        page: Element?,
+        page: Element? = null,
         p: ReadabilityProperties,
     ): Element? {
         LOGGER.info("**** grabArticle ****")
@@ -1528,7 +1535,7 @@ object ReadabilityUtils {
                 }
 
                 if (shouldRemoveTitleHeader && headerDuplicatesTitle(node, p)) {
-                    LOGGER.info("Removing header: {}, {}", node.text().trim(), p.articleTitle.trim())
+                    LOGGER.info("Removing header: {}, {}", node.text().trim(), p.articleTitle?.trim())
                     shouldRemoveTitleHeader = false
                     node = removeAndGetNext(node)
                     continue
