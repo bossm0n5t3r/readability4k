@@ -13,7 +13,7 @@ class Readability(
     doc: Document,
     options: ReadabilityOptions = ReadabilityOptions(),
 ) {
-    private val p = ReadabilityProperties(doc, options)
+    val p = ReadabilityProperties(doc, options)
 
     fun parse(): ReadabilityResult? {
         if (p.maxElemsToParse > 0) {
