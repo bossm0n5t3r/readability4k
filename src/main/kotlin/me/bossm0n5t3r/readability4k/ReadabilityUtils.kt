@@ -314,9 +314,10 @@ object ReadabilityUtils {
     }
 
     fun fixRelativeUris(
-        document: Document,
         articleContent: Element,
+        p: ReadabilityProperties,
     ) {
+        val document = p.document
         val baseURI = document.baseUri()
         val documentURI = document.location()
 
@@ -449,14 +450,14 @@ object ReadabilityUtils {
 
     fun cleanClasses(
         node: Element,
-        classesToPreserve: Set<String>,
+        p: ReadabilityProperties,
     ) {
         val preservedClasses =
             node
                 .attr("class")
                 .takeIf { it.isNotBlank() }
                 ?.split(Regex("\\s+"))
-                ?.filter { it.isNotBlank() && it in classesToPreserve }
+                ?.filter { it.isNotBlank() && it in p.classesToPreserve }
                 ?.joinToString(" ")
                 ?.takeIf { it.isNotEmpty() }
 
@@ -466,19 +467,17 @@ object ReadabilityUtils {
             node.removeAttr("class")
         }
 
-        node.children().forEach { cleanClasses(it, classesToPreserve) }
+        node.children().forEach { cleanClasses(it, p) }
     }
 
     fun postProcessContent(
         articleContent: Element,
-        document: Document,
-        keepClasses: Boolean,
-        classesToPreserve: Set<String>,
+        p: ReadabilityProperties,
     ) {
-        fixRelativeUris(document, articleContent)
+        fixRelativeUris(articleContent, p)
         simplifyNestedElements(articleContent)
-        if (!keepClasses) {
-            cleanClasses(articleContent, classesToPreserve)
+        if (!p.keepClasses) {
+            cleanClasses(articleContent, p)
         }
     }
 
