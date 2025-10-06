@@ -115,5 +115,14 @@ class JSDOMParserTest :
                 nodeExpect(foo.nextSibling, foo.nextElementSibling)
                 nodeExpect(foo.previousSibling, foo.previousElementSibling)
             }
+
+            it("should handle attributes") {
+                val link = baseDoc.getElementsByTagName("a")[0]
+                link.getAttribute("href") shouldBe "#"
+                link.getAttribute("class") shouldBe link.className
+                val foo = baseDoc.getElementById("foo")
+                foo.shouldNotBeNull()
+                foo.id shouldBe foo.getAttribute("id")
+            }
         }
     })
