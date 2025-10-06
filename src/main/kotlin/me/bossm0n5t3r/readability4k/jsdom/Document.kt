@@ -15,6 +15,12 @@ class Document(
 
     val children: MutableList<Element> = mutableListOf()
 
+    val firstElementChild: Element?
+        get() = children.firstOrNull()
+
+    val lastElementChild: Element?
+        get() = children.lastOrNull()
+
     private var _baseURI: String? = null
     val baseURI: String
         get() {

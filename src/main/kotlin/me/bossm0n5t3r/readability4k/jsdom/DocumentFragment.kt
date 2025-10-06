@@ -5,4 +5,10 @@ class DocumentFragment : Node() {
     override val nodeName = "#document-fragment"
 
     val children: MutableList<Element> = mutableListOf()
+
+    val firstElementChild: Element?
+        get() = children.firstOrNull()
+
+    val lastElementChild: Element?
+        get() = children.lastOrNull()
 }
