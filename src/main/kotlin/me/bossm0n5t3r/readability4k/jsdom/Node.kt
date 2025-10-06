@@ -58,14 +58,8 @@ abstract class Node {
                 listOf(newNode)
             }
 
-        val index =
-            if (referenceNode != null) {
-                val referenceNodeIndex = childNodes.indexOf(referenceNode)
-                require(referenceNodeIndex != -1) { "insertBefore: reference node not found." }
-                referenceNodeIndex
-            } else {
-                -1
-            }
+        val index = if (referenceNode != null) childNodes.indexOf(referenceNode) else -1
+        require(referenceNode == null || index != -1) { "insertBefore: reference node not found" }
 
         insertNodesAtIndex(nodes, index)
         return newNode
@@ -94,7 +88,11 @@ abstract class Node {
             prevElem?.nextElementSibling = nextElem
             nextElem?.previousElementSibling = prevElem
 
-            (parent as? Element)?.children?.remove(this)
+            when (parent) {
+                is Element -> parent.children.remove(this)
+                is Document -> parent.children.remove(this)
+                is DocumentFragment -> parent.children.remove(this)
+            }
 
             previousElementSibling = null
             nextElementSibling = null
@@ -112,7 +110,7 @@ abstract class Node {
         newNode: Node,
         oldNode: Node,
     ): Node {
-        if (newNode === oldNode) return oldNode
+        if (newNode == oldNode) return oldNode
         require(oldNode.parentNode == this) { "replaceChild: node to be replaced is not a child of this node" }
         insertBefore(newNode, oldNode)
         oldNode.remove()
@@ -125,18 +123,18 @@ abstract class Node {
     ) {
         if (nodes.isEmpty()) return
 
-        nodes.forEach { node ->
+        for (node in nodes) {
             node.parentNode?.let { node.remove() }
         }
 
-        val afterSibling = if (index == -1) null else childNodes.getOrNull(index)
-        val prevSibling = afterSibling?.previousSibling ?: lastChild
+        val afterSibling = childNodes.getOrNull(index)
+        val prevSibling = if (afterSibling != null) afterSibling.previousSibling else lastChild
 
         val insertionPoint = if (index == -1) childNodes.size else index
         childNodes.addAll(insertionPoint, nodes)
 
         var prev = prevSibling
-        nodes.forEach { node ->
+        for (node in nodes) {
             node.parentNode = this
             node.previousSibling = prev
             prev?.nextSibling = node
@@ -147,34 +145,45 @@ abstract class Node {
         lastInsertedNode.nextSibling = afterSibling
         afterSibling?.previousSibling = lastInsertedNode
 
-        if (this is Element) {
-            val elementsToInsert = nodes.filterIsInstance<Element>()
-            if (elementsToInsert.isNotEmpty()) {
-                var afterElem = afterSibling
-                while (afterElem != null && afterElem !is Element) {
-                    afterElem = afterElem.nextSibling
-                }
+        val elementsToInsert = nodes.filterIsInstance<Element>()
+        if (elementsToInsert.isEmpty()) return
 
-                val prevElem =
-                    afterElem?.previousElementSibling
-                        ?: children.lastOrNull()
-
-                val afterElemIndex = afterElem?.let { children.indexOf(it) } ?: -1
-                val elemInsertionPoint = if (afterElemIndex == -1) children.size else afterElemIndex
-
-                children.addAll(elemInsertionPoint, elementsToInsert)
-
-                var prevElement = prevElem
-                elementsToInsert.forEach { elem ->
-                    elem.previousElementSibling = prevElement
-                    prevElement?.nextElementSibling = elem
-                    prevElement = elem
-                }
-
-                val lastInsertedElem = elementsToInsert.last()
-                lastInsertedElem.nextElementSibling = afterElem
-                afterElem?.previousElementSibling = lastInsertedElem
-            }
+        var afterElem = afterSibling
+        while (afterElem != null && afterElem !is Element) {
+            afterElem = afterElem.nextSibling
         }
+
+        val children =
+            when (this) {
+                is Element -> this.children
+                is Document -> this.children
+                is DocumentFragment -> this.children
+                else -> mutableListOf()
+            }
+        val lastElementChild =
+            when (this) {
+                is Element -> this.lastElementChild
+                is Document -> this.lastElementChild
+                is DocumentFragment -> this.lastElementChild
+                else -> null
+            }
+
+        val prevElem = if (afterElem != null) afterElem.previousElementSibling else lastElementChild
+
+        val afterElemIndex = afterElem?.let { children.indexOf(it) } ?: -1
+        val elemInsertionPoint = if (afterElemIndex == -1) children.size else afterElemIndex
+
+        children.addAll(elemInsertionPoint, elementsToInsert)
+
+        var prevElement = prevElem
+        for (elem in elementsToInsert) {
+            elem.previousElementSibling = prevElement
+            prevElement?.nextElementSibling = elem
+            prevElement = elem
+        }
+
+        val lastInsertedElem = elementsToInsert.last()
+        lastInsertedElem.nextElementSibling = afterElem
+        afterElem?.previousElementSibling = lastInsertedElem
     }
 }
