@@ -1,6 +1,8 @@
 package me.bossm0n5t3r.readability4k.jsdom
 
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import me.bossm0n5t3r.readability4k.LOGGER
 
@@ -68,6 +70,50 @@ class JSDOMParserTest :
 
                 nodeExpect(baseDoc.body?.lastChild, afterFoo)
                 nodeExpect(baseDoc.body?.firstChild, beforeFoo)
+            }
+
+            it("should have working removeChild and appendChild functionality") {
+                val foo = baseDoc.getElementById("foo")
+                foo.shouldNotBeNull()
+
+                val beforeFoo = foo.previousSibling as? Element
+                val afterFoo = foo.nextSibling as? Element
+
+                val removedFoo = foo.parentNode?.removeChild(foo)
+                nodeExpect(foo, removedFoo)
+                foo.parentNode.shouldBeNull()
+                foo.previousSibling.shouldBeNull()
+                foo.nextSibling.shouldBeNull()
+                foo.previousElementSibling.shouldBeNull()
+                foo.nextElementSibling.shouldBeNull()
+
+                beforeFoo?.localName shouldBe "p"
+                nodeExpect(beforeFoo?.nextSibling, afterFoo)
+                nodeExpect(afterFoo?.previousSibling, beforeFoo)
+                nodeExpect(beforeFoo?.nextElementSibling, afterFoo)
+                nodeExpect(afterFoo?.previousElementSibling, beforeFoo)
+
+                baseDoc.body?.childNodes?.size shouldBe 2
+
+                baseDoc.body?.appendChild(foo)
+
+                baseDoc.body?.childNodes?.size shouldBe 3
+                nodeExpect(afterFoo?.nextSibling, foo)
+                nodeExpect(foo.previousSibling, afterFoo)
+                nodeExpect(afterFoo?.nextElementSibling, foo)
+                nodeExpect(foo.previousElementSibling, afterFoo)
+
+                afterFoo.shouldNotBeNull()
+                baseDoc.body?.appendChild(afterFoo)
+                nodeExpect(foo.previousSibling, beforeFoo)
+                nodeExpect(foo.nextSibling, afterFoo)
+                nodeExpect(foo.previousElementSibling, beforeFoo)
+                nodeExpect(foo.nextElementSibling, afterFoo)
+
+                nodeExpect(foo.previousSibling?.nextSibling, foo)
+                nodeExpect(foo.nextSibling?.previousSibling, foo)
+                nodeExpect(foo.nextSibling, foo.nextElementSibling)
+                nodeExpect(foo.previousSibling, foo.previousElementSibling)
             }
         }
     })
