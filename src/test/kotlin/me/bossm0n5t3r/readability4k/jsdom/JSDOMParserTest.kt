@@ -1,5 +1,6 @@
 package me.bossm0n5t3r.readability4k.jsdom
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -285,6 +286,17 @@ class JSDOMParserTest :
                 newEl2.nextElementSibling.shouldBeNull()
                 nodeExpect(pA2.nextElementSibling, spanB2)
                 nodeExpect(spanB2.nextElementSibling, newEl2)
+            }
+
+            it("should throw an error when inserting before a non-child") {
+                val doc = JSDOMParser().parse("""<div><p>A</p></div>""")
+                val div = doc.getElementsByTagName("div")[0]
+                val p = doc.createElement("p")
+                val unconnected = doc.createElement("span")
+
+                shouldThrow<IllegalArgumentException> {
+                    div.insertBefore(p, unconnected)
+                }.message shouldBe "insertBefore: reference node not found"
             }
         }
     })
