@@ -217,5 +217,42 @@ class JSDOMParserTest :
                     }
                 }
             }
+
+            it("should have a working insertBefore") {
+                val doc = JSDOMParser().parse(baseTestCase)
+                val body = doc.body
+                val foo = doc.getElementById("foo")
+                val p = doc.getElementsByTagName("p")[0]
+                val form = doc.getElementsByTagName("form")[0]
+
+                val newEl = doc.createElement("hr")
+                body?.insertBefore(newEl, foo)
+                nodeExpect(p.nextSibling, newEl)
+                nodeExpect(newEl.nextSibling, foo)
+                nodeExpect(foo?.previousSibling, newEl)
+                nodeExpect(newEl.previousSibling, p)
+                nodeExpect(p.nextElementSibling, newEl)
+                nodeExpect(newEl.nextElementSibling, foo)
+                nodeExpect(foo?.previousElementSibling, newEl)
+                nodeExpect(newEl.previousElementSibling, p)
+                body?.childNodes?.size shouldBe 4
+                body?.children?.size shouldBe 4
+
+                val newEl2 = doc.createElement("hr")
+                body?.insertBefore(newEl2, null)
+                nodeExpect(body?.lastChild, newEl2)
+                nodeExpect(form.nextSibling, newEl2)
+                nodeExpect(newEl2.previousSibling, form)
+                body?.childNodes?.size shouldBe 5
+                body?.children?.size shouldBe 5
+
+                val newEl3 = doc.createElement("hr")
+                body?.insertBefore(newEl3, p)
+                nodeExpect(body?.firstChild, newEl3)
+                nodeExpect(newEl3.nextSibling, p)
+                nodeExpect(p.previousSibling, newEl3)
+                body?.childNodes?.size shouldBe 6
+                body?.children?.size shouldBe 6
+            }
         }
     })
