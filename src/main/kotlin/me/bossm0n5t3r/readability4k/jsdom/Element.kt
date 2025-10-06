@@ -6,7 +6,6 @@ class Element(
     override val nodeType = NodeType.ELEMENT_NODE
 
     val matchingTag: String = tag
-    val localName: String
     val tagName: String
 
     init {
