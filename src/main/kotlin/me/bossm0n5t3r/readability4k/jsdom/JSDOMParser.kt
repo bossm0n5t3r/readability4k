@@ -1,4 +1,6 @@
-package me.bossm0n5t3r.readability4k
+package me.bossm0n5t3r.readability4k.jsdom
+
+import me.bossm0n5t3r.readability4k.LOGGER
 
 class JSDOMParser {
     private var html: String = ""

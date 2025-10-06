@@ -1,6 +1,5 @@
-package me.bossm0n5t3r.readability4k
+package me.bossm0n5t3r.readability4k.jsdom
 
-import me.bossm0n5t3r.readability4k.NodeUtils.getElementsByTagName
 import java.net.URI
 
 class Document(
@@ -38,7 +37,7 @@ class Document(
             return result
         }
 
-    fun getElementsByTagName(tag: String): List<Element> = getElementsByTagName(this, tag)
+    fun getElementsByTagName(tag: String): List<Element> = NodeUtils.getElementsByTagName(this, tag)
 
     fun getElementById(id: String): Element? {
         fun getElem(node: Node): Element? {
