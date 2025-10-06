@@ -1,4 +1,4 @@
-package me.bossm0n5t3r.readability4k
+package me.bossm0n5t3r.readability4k.jsdom
 
 data class Attribute(
     val name: String,
