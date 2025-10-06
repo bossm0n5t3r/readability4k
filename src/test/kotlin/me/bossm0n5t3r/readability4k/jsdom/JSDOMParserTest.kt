@@ -2,6 +2,7 @@ package me.bossm0n5t3r.readability4k.jsdom
 
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
+import me.bossm0n5t3r.readability4k.LOGGER
 
 @Suppress("SpellCheckingInspection")
 class JSDOMParserTest :
@@ -18,6 +19,9 @@ class JSDOMParserTest :
                 actual: Node?,
                 expected: Node?,
             ) {
+                if (actual == null && expected == null) {
+                    LOGGER.debug("Both are null")
+                }
                 actual shouldBe expected
             }
 
@@ -38,6 +42,32 @@ class JSDOMParserTest :
                 val scriptHTML = scriptNode.innerHTML
                 scriptHTML shouldBe """With &lt; fancy " characters in it because"""
                 scriptNode.textContent shouldBe """With < fancy " characters in it because"""
+            }
+
+            it("should have basic URI information") {
+                baseDoc.documentURI shouldBe "http://fakehost/"
+                baseDoc.baseURI shouldBe "http://fakehost/"
+            }
+
+            it("should deal with script tags") {
+                val scripts = baseDoc.getElementsByTagName("script")
+                scripts.size shouldBe 1
+                scripts[0].textContent shouldBe """With < fancy " characters in it because"""
+            }
+
+            it("should have working sibling/first+lastChild properties") {
+                val foo = baseDoc.getElementById("foo")
+
+                nodeExpect(foo?.previousSibling?.nextSibling, foo)
+                nodeExpect(foo?.nextSibling?.previousSibling, foo)
+                nodeExpect(foo?.nextSibling, foo?.nextElementSibling)
+                nodeExpect(foo?.previousSibling, foo?.previousElementSibling)
+
+                val beforeFoo = foo?.previousSibling
+                val afterFoo = foo?.nextSibling
+
+                nodeExpect(baseDoc.body?.lastChild, afterFoo)
+                nodeExpect(baseDoc.body?.firstChild, beforeFoo)
             }
         }
     })
