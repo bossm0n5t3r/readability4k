@@ -254,5 +254,37 @@ class JSDOMParserTest :
                 body?.childNodes?.size shouldBe 6
                 body?.children?.size shouldBe 6
             }
+
+            it("should correctly handle mixed element/text siblings on insertBefore") {
+                val html1 = """<div><p>A</p>Some Text<span>B</span></div>"""
+                val doc1 = JSDOMParser().parse(html1)
+                val div1 = doc1.getElementsByTagName("div")[0]
+                val pA1 = doc1.getElementsByTagName("p")[0]
+                val textNode1 = div1.childNodes[1]
+                val spanB1 = doc1.getElementsByTagName("span")[0]
+                val newEl1 = doc1.createElement("hr")
+                div1.insertBefore(newEl1, spanB1)
+                nodeExpect(newEl1.previousSibling, textNode1)
+                nodeExpect(newEl1.previousElementSibling, pA1)
+                nodeExpect(newEl1.nextSibling, spanB1)
+                nodeExpect(newEl1.nextElementSibling, spanB1)
+                nodeExpect(pA1.nextElementSibling, newEl1)
+                nodeExpect(spanB1.previousElementSibling, newEl1)
+
+                val html2 = """<div><p>A</p><span>B</span>Some Text</div>"""
+                val doc2 = JSDOMParser().parse(html2)
+                val div2 = doc2.getElementsByTagName("div")[0]
+                val pA2 = doc2.getElementsByTagName("p")[0]
+                val spanB2 = doc2.getElementsByTagName("span")[0]
+                val textNode2 = div2.childNodes[2]
+                val newEl2 = doc2.createElement("hr")
+                div2.insertBefore(newEl2, textNode2)
+                nodeExpect(newEl2.previousSibling, spanB2)
+                nodeExpect(newEl2.previousElementSibling, spanB2)
+                nodeExpect(newEl2.nextSibling, textNode2)
+                newEl2.nextElementSibling.shouldBeNull()
+                nodeExpect(pA2.nextElementSibling, spanB2)
+                nodeExpect(spanB2.nextElementSibling, newEl2)
+            }
         }
     })
