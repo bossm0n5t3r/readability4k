@@ -4,6 +4,8 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import me.bossm0n5t3r.readability4k.LOGGER
 
 @Suppress("SpellCheckingInspection")
@@ -123,6 +125,97 @@ class JSDOMParserTest :
                 val foo = baseDoc.getElementById("foo")
                 foo.shouldNotBeNull()
                 foo.id shouldBe foo.getAttribute("id")
+            }
+
+            it("should have a working replaceChild") {
+                val parent = baseDoc.getElementsByTagName("div")[0]
+                val p = baseDoc.createElement("p")
+                p.setAttribute("id", "my-replaced-kid")
+                val childCount = parent.childNodes.size
+                val childElCount = parent.children.size
+
+                for (i in 0 until childCount) {
+                    val replacedNode = parent.childNodes[i]
+                    val replacedAnElement = replacedNode.nodeType == NodeType.ELEMENT_NODE
+                    val oldNext = replacedNode.nextSibling
+                    val oldNextEl = (replacedNode as? Element)?.nextElementSibling
+                    val oldPrev = replacedNode.previousSibling
+                    val oldPrevEl = (replacedNode as? Element)?.previousElementSibling
+
+                    parent.replaceChild(p, replacedNode)
+
+                    nodeExpect(p.nextSibling, oldNext)
+                    nodeExpect(p.previousSibling, oldPrev)
+                    nodeExpect(p.parentNode, parent)
+
+                    replacedNode.parentNode.shouldBeNull()
+                    replacedNode.nextSibling.shouldBeNull()
+                    replacedNode.previousSibling.shouldBeNull()
+                    if (replacedAnElement) {
+                        (replacedNode as? Element)?.nextElementSibling.shouldBeNull()
+                        (replacedNode as? Element)?.previousElementSibling.shouldBeNull()
+                    }
+
+                    if (oldNext != null) {
+                        nodeExpect(oldNext.previousSibling, p)
+                    }
+                    if (oldPrev != null) {
+                        nodeExpect(oldPrev.nextSibling, p)
+                    }
+
+                    nodeExpect(parent.childNodes[i], p)
+
+                    val kidElementIndex = parent.children.indexOf(p)
+                    kidElementIndex shouldNotBe -1
+
+                    if (kidElementIndex > 0) {
+                        nodeExpect(parent.children[kidElementIndex - 1], p.previousElementSibling)
+                        nodeExpect(p.previousElementSibling?.nextElementSibling, p)
+                    } else {
+                        p.previousElementSibling.shouldBeNull()
+                    }
+                    if (kidElementIndex < parent.children.size - 1) {
+                        nodeExpect(parent.children[kidElementIndex + 1], p.nextElementSibling)
+                        nodeExpect(p.nextElementSibling?.previousElementSibling, p)
+                    } else {
+                        p.nextElementSibling.shouldBeNull()
+                    }
+
+                    if (replacedAnElement) {
+                        nodeExpect(oldNextEl, p.nextElementSibling)
+                        nodeExpect(oldPrevEl, p.previousElementSibling)
+                    }
+
+                    parent.childNodes.size shouldBe childCount
+                    parent.children.size shouldBe if (replacedAnElement) childElCount else childElCount + 1
+
+                    parent.replaceChild(replacedNode, p)
+
+                    nodeExpect(oldNext, replacedNode.nextSibling)
+                    nodeExpect(oldNextEl, (replacedNode as? Element)?.nextElementSibling)
+                    nodeExpect(oldPrev, replacedNode.previousSibling)
+                    nodeExpect(oldPrevEl, (replacedNode as? Element)?.previousElementSibling)
+                    if (replacedNode.nextSibling != null) {
+                        nodeExpect(replacedNode.nextSibling?.previousSibling, replacedNode)
+                    }
+                    if (replacedNode.previousSibling != null) {
+                        nodeExpect(replacedNode.previousSibling?.nextSibling, replacedNode)
+                    }
+                    if (replacedAnElement) {
+                        if ((replacedNode as? Element)?.previousElementSibling != null) {
+                            nodeExpect(
+                                replacedNode.previousElementSibling?.nextElementSibling,
+                                replacedNode,
+                            )
+                        }
+                        if ((replacedNode as? Element)?.nextElementSibling != null) {
+                            nodeExpect(
+                                replacedNode.nextElementSibling?.previousElementSibling,
+                                replacedNode,
+                            )
+                        }
+                    }
+                }
             }
         }
     })
