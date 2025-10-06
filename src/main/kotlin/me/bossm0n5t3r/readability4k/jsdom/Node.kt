@@ -9,6 +9,7 @@ abstract class Node {
     var nextSibling: Node? = null
 
     val childNodes: MutableList<Node> = mutableListOf()
+    var localName: String? = null
 
     open val textContent: String
         get() {
