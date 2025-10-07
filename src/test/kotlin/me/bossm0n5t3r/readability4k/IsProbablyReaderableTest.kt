@@ -4,8 +4,8 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonPrimitive
+import me.bossm0n5t3r.readability4k.jsdom.DOMParser
 import me.bossm0n5t3r.readability4k.jsdom.Element
-import me.bossm0n5t3r.readability4k.jsdom.JSDOMParser
 
 @Suppress("SpellCheckingInspection")
 class IsProbablyReaderableTest :
@@ -17,7 +17,7 @@ class IsProbablyReaderableTest :
                 describe(it.dir) {
                     val expected = it.expectedMetadata[READERABLE]?.jsonPrimitive?.boolean
                     requireNotNull(expected) { "Expected $READERABLE metadata property in test page" }
-                    val document = JSDOMParser().parse(it.source)
+                    val document = DOMParser().parse(it.source)
                     val result = isProbablyReaderable(document)
                     it("The result should ${if (expected) "" else "not "}be readerable") {
                         result shouldBe expected
@@ -27,7 +27,7 @@ class IsProbablyReaderableTest :
         }
 
         describe("isProbablyReaderable") {
-            val makeDoc = { html: String -> JSDOMParser().parse(html) }
+            val makeDoc = { html: String -> DOMParser().parse(html) }
 
             // content length: 11
             val verySmallDoc = makeDoc("<html><p id=\"main\">hello there</p></html>")
