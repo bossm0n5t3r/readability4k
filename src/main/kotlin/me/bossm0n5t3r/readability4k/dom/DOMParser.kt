@@ -119,15 +119,13 @@ class DOMParser {
         return true
     }
 
-    private fun match(str: String): Boolean {
-        val substr = html.substring(currentChar, (currentChar + str.length).coerceAtMost(html.length))
-        return if (substr.equals(str, ignoreCase = true)) {
+    private fun match(str: String): Boolean =
+        if (html.startsWith(str, currentChar, ignoreCase = true)) {
             currentChar += str.length
             true
         } else {
             false
         }
-    }
 
     @Suppress("SameParameterValue")
     private fun discardTo(str: String) {
@@ -223,12 +221,17 @@ class DOMParser {
             readChildren(node)
             val closingTag = "</${node.matchingTag}>"
             if (!match(closingTag)) {
-                error(
-                    "expected '$closingTag' and got ${html.substring(
-                        currentChar,
-                        (currentChar + closingTag.length).coerceAtMost(html.length),
-                    )}",
-                )
+                val errorMessage =
+                    if (currentChar < 0 || currentChar >= html.length) {
+                        ", but currentChar < 0 || currentChar >= html.length, $currentChar, ${html.length}"
+                    } else {
+                        "and got " +
+                            html.substring(
+                                currentChar,
+                                (currentChar + closingTag.length).coerceAtMost(html.length),
+                            )
+                    }
+                error("expected '$closingTag' $errorMessage")
                 return null
             }
         }
