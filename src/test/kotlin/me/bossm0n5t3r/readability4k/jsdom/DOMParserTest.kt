@@ -6,18 +6,17 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.types.shouldBeSameInstanceAs
 import me.bossm0n5t3r.readability4k.LOGGER
 
 @Suppress("SpellCheckingInspection")
-class JSDOMParserTest :
+class DOMParserTest :
     DescribeSpec({
         val baseTestCase =
             """<html><body><p>Some text and <a class="someclass" href="#">a link</a></p>""" +
                 """<div id="foo">With a <script>With &lt; fancy " characters in it because""" +
                 """</script> that is fun.<span>And another node to make it harder</span></div><form><input type="text"/><input type="number"/>Here's a form</form></body></html>"""
 
-        val baseDoc = JSDOMParser().parse(baseTestCase, "http://fakehost/")
+        val baseDoc = DOMParser().parse(baseTestCase, "http://fakehost/")
 
         describe("Test JSDOM functionality") {
             fun nodeExpect(
@@ -220,7 +219,7 @@ class JSDOMParserTest :
             }
 
             it("should have a working insertBefore") {
-                val doc = JSDOMParser().parse(baseTestCase)
+                val doc = DOMParser().parse(baseTestCase)
                 val body = doc.body
                 val foo = doc.getElementById("foo")
                 val p = doc.getElementsByTagName("p")[0]
@@ -258,7 +257,7 @@ class JSDOMParserTest :
 
             it("should correctly handle mixed element/text siblings on insertBefore") {
                 val html1 = """<div><p>A</p>Some Text<span>B</span></div>"""
-                val doc1 = JSDOMParser().parse(html1)
+                val doc1 = DOMParser().parse(html1)
                 val div1 = doc1.getElementsByTagName("div")[0]
                 val pA1 = doc1.getElementsByTagName("p")[0]
                 val textNode1 = div1.childNodes[1]
@@ -273,7 +272,7 @@ class JSDOMParserTest :
                 nodeExpect(spanB1.previousElementSibling, newEl1)
 
                 val html2 = """<div><p>A</p><span>B</span>Some Text</div>"""
-                val doc2 = JSDOMParser().parse(html2)
+                val doc2 = DOMParser().parse(html2)
                 val div2 = doc2.getElementsByTagName("div")[0]
                 val pA2 = doc2.getElementsByTagName("p")[0]
                 val spanB2 = doc2.getElementsByTagName("span")[0]
@@ -289,7 +288,7 @@ class JSDOMParserTest :
             }
 
             it("should throw an error when inserting before a non-child") {
-                val doc = JSDOMParser().parse("""<div><p>A</p></div>""")
+                val doc = DOMParser().parse("""<div><p>A</p></div>""")
                 val div = doc.getElementsByTagName("div")[0]
                 val p = doc.createElement("p")
                 val unconnected = doc.createElement("span")
