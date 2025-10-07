@@ -132,7 +132,7 @@ class Element(
             return builder.toString()
         }
         set(html) {
-            val parser = JSDOMParser()
+            val parser = DOMParser()
             val node = parser.parse(html)
 
             childNodes.forEach { it.parentNode = null }

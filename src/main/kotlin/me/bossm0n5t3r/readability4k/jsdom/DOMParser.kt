@@ -2,7 +2,7 @@ package me.bossm0n5t3r.readability4k.jsdom
 
 import me.bossm0n5t3r.readability4k.LOGGER
 
-class JSDOMParser {
+class DOMParser {
     private var html: String = ""
     private var currentChar: Int = 0
     private val strBuf: StringBuilder = StringBuilder()
