@@ -6,7 +6,7 @@ class Element(
     override val nodeType = NodeType.ELEMENT_NODE
 
     val matchingTag: String = tag
-    val tagName: String
+    var tagName: String
 
     init {
         val lastColonIndex = tag.lastIndexOf(':')
@@ -55,6 +55,15 @@ class Element(
     var srcset: String
         get() = getAttribute("srcset") ?: ""
         set(value) = setAttribute("srcset", value)
+
+    fun hasClass(className: String): Boolean {
+        val classAttr = this.className.trim()
+        if (classAttr.isEmpty()) return false
+        val classes = classAttr.split(Regex("\\s+"))
+        return className in classes
+    }
+
+    fun querySelectorAll(selector: String): List<Element> = NodeUtils.querySelectorAll(this, selector)
 
     fun getAttribute(name: String): String? = attributes.findLast { it.name == name }?.value
 
