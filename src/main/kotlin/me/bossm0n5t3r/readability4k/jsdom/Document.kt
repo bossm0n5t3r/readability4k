@@ -45,6 +45,8 @@ class Document(
 
     fun getElementsByTagName(tag: String): List<Element> = NodeUtils.getElementsByTagName(this, tag)
 
+    fun querySelectorAll(selector: String): List<Element> = NodeUtils.querySelectorAll(this, selector)
+
     fun getElementById(id: String): Element? {
         fun getElem(node: Node): Element? {
             if (node is Element && node.id == id) {
