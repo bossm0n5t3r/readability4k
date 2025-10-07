@@ -7,14 +7,13 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import me.bossm0n5t3r.readability4k.ReadabilityUtils.everyNode
 import me.bossm0n5t3r.readability4k.Regexps.IMAGE_EXTENSION_REGEX
 import me.bossm0n5t3r.readability4k.Regexps.IMAGE_URL_REGEX
 import me.bossm0n5t3r.readability4k.Regexps.SRCSET_CANDIDATE_REGEX
-import me.bossm0n5t3r.readability4k.jsdom.Document
-import me.bossm0n5t3r.readability4k.jsdom.Element
-import me.bossm0n5t3r.readability4k.jsdom.Node
-import me.bossm0n5t3r.readability4k.jsdom.NodeType
+import me.bossm0n5t3r.readability4k.dom.Document
+import me.bossm0n5t3r.readability4k.dom.Element
+import me.bossm0n5t3r.readability4k.dom.Node
+import me.bossm0n5t3r.readability4k.dom.NodeType
 import java.math.BigDecimal
 import java.net.URI
 

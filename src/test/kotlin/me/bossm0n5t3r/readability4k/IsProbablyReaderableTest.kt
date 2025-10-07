@@ -4,8 +4,8 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonPrimitive
-import me.bossm0n5t3r.readability4k.jsdom.DOMParser
-import me.bossm0n5t3r.readability4k.jsdom.Element
+import me.bossm0n5t3r.readability4k.dom.DOMParser
+import me.bossm0n5t3r.readability4k.dom.Element
 
 @Suppress("SpellCheckingInspection")
 class IsProbablyReaderableTest :

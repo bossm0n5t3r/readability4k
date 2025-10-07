@@ -1,7 +1,7 @@
 package me.bossm0n5t3r.readability4k
 
-import me.bossm0n5t3r.readability4k.jsdom.Document
-import me.bossm0n5t3r.readability4k.jsdom.Element
+import me.bossm0n5t3r.readability4k.dom.Document
+import me.bossm0n5t3r.readability4k.dom.Element
 import java.math.BigDecimal
 
 data class ReadabilityProperties(
