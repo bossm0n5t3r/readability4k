@@ -1,6 +1,6 @@
 package me.bossm0n5t3r.readability4k
 
-import org.jsoup.nodes.Element
+import me.bossm0n5t3r.readability4k.jsdom.Element
 import java.math.BigDecimal
 
 /**
