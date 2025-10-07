@@ -1,4 +1,4 @@
-package me.bossm0n5t3r.readability4k.jsdom
+package me.bossm0n5t3r.readability4k.dom
 
 object HtmlEntities {
     private val HTML_ENTITY_PATTERN = Regex("&(quot|amp|apos|lt|gt);")

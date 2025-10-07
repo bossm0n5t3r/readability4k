@@ -7,7 +7,7 @@ import me.bossm0n5t3r.readability4k.ReadabilityUtils.postProcessContent
 import me.bossm0n5t3r.readability4k.ReadabilityUtils.prepDocument
 import me.bossm0n5t3r.readability4k.ReadabilityUtils.removeScripts
 import me.bossm0n5t3r.readability4k.ReadabilityUtils.unwrapNoscriptImages
-import me.bossm0n5t3r.readability4k.jsdom.Document
+import me.bossm0n5t3r.readability4k.dom.Document
 
 class Readability(
     doc: Document,
