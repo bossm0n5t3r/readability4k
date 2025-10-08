@@ -297,5 +297,33 @@ class DOMParserTest :
                     div.insertBefore(p, unconnected)
                 }.message shouldBe "insertBefore: reference node not found"
             }
+
+            it("should have a working createDocumentFragment") {
+                val doc = DOMParser().parse(baseTestCase)
+                val body = doc.body
+                val fragment = doc.createDocumentFragment()
+                body.shouldNotBeNull()
+                fragment.nodeType shouldBe NodeType.DOCUMENT_FRAGMENT_NODE
+                fragment.nodeName shouldBe "#document-fragment"
+
+                val p = doc.getElementsByTagName("p")[0]
+                val foo = doc.getElementById("foo")
+                foo.shouldNotBeNull()
+
+                fragment.appendChild(p)
+                fragment.appendChild(foo)
+
+                p.parentNode shouldBe fragment
+                foo.parentNode shouldBe fragment
+                fragment.childNodes.size shouldBe 2
+                fragment.children.size shouldBe 2
+                body.childNodes.size shouldBe 1
+
+                body.appendChild(fragment)
+                body.childNodes.size shouldBe 3
+                p.parentNode shouldBe body
+                foo.parentNode shouldBe body
+                fragment.childNodes.size shouldBe 0
+            }
         }
     })
