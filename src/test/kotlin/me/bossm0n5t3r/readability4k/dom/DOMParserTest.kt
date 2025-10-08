@@ -325,5 +325,29 @@ class DOMParserTest :
                 foo.parentNode shouldBe body
                 fragment.childNodes.size shouldBe 0
             }
+
+            it("should handle moving an existing child with insertBefore") {
+                val doc = DOMParser().parse("""<div><p>A</p><p>B</p><p>C</p></div>""")
+                val div = doc.getElementsByTagName("div")[0]
+                val pA = div.children[0]
+                val pB = div.children[1]
+                val pC = div.children[2]
+
+                div.insertBefore(pC, pB)
+
+                div.children.size shouldBe 3
+                nodeExpect(div.children[0], pA)
+                nodeExpect(div.children[1], pC)
+                nodeExpect(div.children[2], pB)
+
+                pA.previousSibling.shouldBeNull()
+                nodeExpect(pA.nextSibling, pC)
+
+                nodeExpect(pC.previousSibling, pA)
+                nodeExpect(pC.nextSibling, pB)
+
+                nodeExpect(pB.previousSibling, pC)
+                pB.nextSibling.shouldBeNull()
+            }
         }
     })
