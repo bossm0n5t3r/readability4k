@@ -349,5 +349,55 @@ class DOMParserTest :
                 nodeExpect(pB.previousSibling, pC)
                 pB.nextSibling.shouldBeNull()
             }
+
+            it("should handle inserting a node before itself as a no-op") {
+                val doc = DOMParser().parse("""<div><p>A</p><p>B</p></div>""")
+                val div = doc.getElementsByTagName("div")[0]
+                val pA = div.children[0]
+                val pB = div.children[1]
+
+                div.insertBefore(pB, pB)
+
+                div.children.size shouldBe 2
+                nodeExpect(div.children[0], pA)
+                nodeExpect(div.children[1], pB)
+                nodeExpect(pA.nextSibling, pB)
+                nodeExpect(pB.previousSibling, pA)
+            }
+
+            it("should handle replacing a node with itself as a no-op") {
+                val doc = DOMParser().parse("""<div><p>A</p><p>B</p></div>""")
+                val div = doc.getElementsByTagName("div")[0]
+                val pA = div.children[0]
+                val pB = div.children[1]
+
+                div.replaceChild(pB, pB)
+
+                div.children.size shouldBe 2
+                nodeExpect(div.children[0], pA)
+                nodeExpect(div.children[1], pB)
+                nodeExpect(pA.nextSibling, pB)
+                nodeExpect(pB.previousSibling, pA)
+            }
+
+            it("should correctly handle sibling pointers on remove()") {
+                val doc = DOMParser().parse("""<div><p>A</p>Some text<p>B</p></div>""")
+                val div = doc.getElementsByTagName("div")[0]
+                val pA = div.children[0]
+                val textNode = div.childNodes[1]
+                val pB = div.children[1]
+
+                nodeExpect(pA.nextElementSibling, pB)
+                nodeExpect(pB.previousElementSibling, pA)
+
+                textNode.remove()
+
+                nodeExpect(pA.nextElementSibling, pB)
+                nodeExpect(pB.previousElementSibling, pA)
+
+                textNode.parentNode.shouldBeNull()
+                textNode.nextSibling.shouldBeNull()
+                textNode.previousSibling.shouldBeNull()
+            }
         }
     })
