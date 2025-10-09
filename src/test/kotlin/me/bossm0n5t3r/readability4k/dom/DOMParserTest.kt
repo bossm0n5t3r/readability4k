@@ -7,6 +7,8 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import me.bossm0n5t3r.readability4k.LOGGER
+import me.bossm0n5t3r.readability4k.dom.NodeUtils.innerHTMLOrNull
+import me.bossm0n5t3r.readability4k.dom.NodeUtils.textContentOrNull
 
 @Suppress("SpellCheckingInspection")
 class DOMParserTest :
@@ -398,6 +400,37 @@ class DOMParserTest :
                 textNode.parentNode.shouldBeNull()
                 textNode.nextSibling.shouldBeNull()
                 textNode.previousSibling.shouldBeNull()
+            }
+        }
+
+        describe("Test HTML escaping") {
+            val baseStr =
+                """<p>Hello, everyone &amp; all their friends, &lt;this&gt; is a &quot; test with &apos; quotes.</p>"""
+            val doc = DOMParser().parse(baseStr)
+            val p = doc.getElementsByTagName("p")[0]
+            val txtNode = p.firstChild
+
+            it("should handle encoding HTML correctly") {
+                "<p>${p.innerHTML}</p>" shouldBe baseStr
+                "<p>${txtNode?.innerHTMLOrNull}</p>" shouldBe baseStr
+            }
+
+            it("should have decoded correctly") {
+                p.textContent shouldBe """Hello, everyone & all their friends, <this> is a " test with ' quotes."""
+                txtNode?.textContent shouldBe """Hello, everyone & all their friends, <this> is a " test with ' quotes."""
+            }
+
+            it("should handle updates via textContent correctly") {
+                txtNode?.textContentOrNull = txtNode.textContentOrNull + " "
+                txtNode?.textContentOrNull = txtNode.textContentOrNull?.trim()
+                val expectedHTML = baseStr.replace("&quot;", "\"").replace("&apos;", "'")
+                "<p>${txtNode?.innerHTMLOrNull}</p>" shouldBe expectedHTML
+                "<p>${p.innerHTML}</p>" shouldBe expectedHTML
+            }
+
+            it("should handle decimal and hex escape sequences") {
+                val parsedDoc = DOMParser().parse("""<p>&#32;&#x20;</p>""")
+                parsedDoc.getElementsByTagName("p")[0].textContent shouldBe "  "
             }
         }
     })
