@@ -1,6 +1,30 @@
 package me.bossm0n5t3r.readability4k.dom
 
 object NodeUtils {
+    val Node.innerHTMLOrNull: String?
+        get() =
+            when (this) {
+                is Element -> this.innerHTML
+                is TextNode -> this.innerHTML
+                else -> null
+            }
+
+    var Node.textContentOrNull: String?
+        get() =
+            when (this) {
+                is Element -> this.textContent
+                is TextNode -> this.textContent
+                else -> null
+            }
+        set(value) {
+            if (value == null) return
+            when (this) {
+                is Element -> this.textContent = value
+                is TextNode -> this.textContent = value
+                else -> {}
+            }
+        }
+
     fun getElementsByTagName(
         root: Node,
         tag: String,
