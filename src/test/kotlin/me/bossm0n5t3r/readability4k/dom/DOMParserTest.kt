@@ -6,6 +6,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import me.bossm0n5t3r.readability4k.LOGGER
 import me.bossm0n5t3r.readability4k.dom.NodeUtils.innerHTMLOrNull
 import me.bossm0n5t3r.readability4k.dom.NodeUtils.textContentOrNull
@@ -431,6 +432,72 @@ class DOMParserTest :
             it("should handle decimal and hex escape sequences") {
                 val parsedDoc = DOMParser().parse("""<p>&#32;&#x20;</p>""")
                 parsedDoc.getElementsByTagName("p")[0].textContent shouldBe "  "
+            }
+        }
+
+        describe("Script parsing") {
+            it("should strip ?-based comments within script tags") {
+                val html = """<script><?Silly test <img src="test"></script>"""
+                val doc = DOMParser().parse(html)
+
+                val docFirstChild = doc.firstChild as Element
+
+                docFirstChild.tagName shouldBe "SCRIPT"
+                docFirstChild.textContent shouldBe ""
+                docFirstChild.children.size shouldBe 0
+                docFirstChild.childNodes.size shouldBe 0
+            }
+
+            it("should strip !-based comments within script tags") {
+                val html = """<script><!--Silly test > <script src="foo.js"></script>--></script>"""
+                val doc = DOMParser().parse(html)
+
+                doc.firstChild.shouldBeInstanceOf<Element>()
+                val docFirstChild = doc.firstChild as Element
+
+                docFirstChild.tagName shouldBe "SCRIPT"
+                docFirstChild.textContent shouldBe ""
+                docFirstChild.children.size shouldBe 0
+                docFirstChild.childNodes.size shouldBe 0
+            }
+
+            it("should strip any other nodes within script tags") {
+                val html = """<script>&lt;div>Hello, I'm not really in a &lt;/div></script>"""
+                val doc = DOMParser().parse(html)
+
+                doc.firstChild.shouldBeInstanceOf<Element>()
+                val docFirstChild = doc.firstChild as Element
+
+                docFirstChild.tagName shouldBe "SCRIPT"
+                docFirstChild.textContent shouldBe """<div>Hello, I'm not really in a </div>"""
+                docFirstChild.children.size shouldBe 0
+                docFirstChild.childNodes.size shouldBe 1
+            }
+
+            it("should strip any other invalid script nodes within script tags") {
+                val html = """<script>&lt;script src="foo.js">&lt;/script></script>"""
+                val doc = DOMParser().parse(html)
+
+                doc.firstChild.shouldBeInstanceOf<Element>()
+                val docFirstChild = doc.firstChild as Element
+
+                docFirstChild.tagName shouldBe "SCRIPT"
+                docFirstChild.textContent shouldBe """<script src="foo.js"></script>"""
+                docFirstChild.children.size shouldBe 0
+                docFirstChild.childNodes.size shouldBe 1
+            }
+
+            it("should not be confused by partial closing tags") {
+                val html = """<script>var x = '&lt;script>Hi&lt;' + '/script>';</script>"""
+                val doc = DOMParser().parse(html)
+
+                doc.firstChild.shouldBeInstanceOf<Element>()
+                val docFirstChild = doc.firstChild as Element
+
+                docFirstChild.tagName shouldBe "SCRIPT"
+                docFirstChild.textContent shouldBe """var x = '<script>Hi<' + '/script>';"""
+                docFirstChild.children.size shouldBe 0
+                docFirstChild.childNodes.size shouldBe 1
             }
         }
     })
