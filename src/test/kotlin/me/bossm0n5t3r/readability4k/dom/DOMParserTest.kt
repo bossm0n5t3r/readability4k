@@ -500,4 +500,29 @@ class DOMParserTest :
                 docFirstChild.childNodes.size shouldBe 1
             }
         }
+
+        describe("Tag local name case handling") {
+            it("should lowercase tag names") {
+                val html = """<DIV><svG><clippath/></svG></DIV>"""
+                val doc = DOMParser().parse(html)
+
+                doc.firstChild.shouldBeInstanceOf<Element>()
+                val docFirstChild = doc.firstChild as Element
+
+                docFirstChild.tagName shouldBe "DIV"
+                docFirstChild.localName shouldBe "div"
+
+                docFirstChild.firstChild.shouldBeInstanceOf<Element>()
+                val docFirstChildFirstChild = docFirstChild.firstChild as Element
+
+                docFirstChildFirstChild.tagName shouldBe "SVG"
+                docFirstChildFirstChild.localName shouldBe "svg"
+
+                docFirstChildFirstChild.firstChild.shouldBeInstanceOf<Element>()
+                val docFirstChildFirstChildFirstChild = docFirstChildFirstChild.firstChild as Element
+
+                docFirstChildFirstChildFirstChild.tagName shouldBe "CLIPPATH"
+                docFirstChildFirstChildFirstChild.localName shouldBe "clippath"
+            }
+        }
     })
