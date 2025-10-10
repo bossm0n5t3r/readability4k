@@ -37,7 +37,7 @@ class DOMParserTest :
                 baseDoc.getElementsByTagName("*").size shouldBe 10
 
                 val foo = baseDoc.getElementById("foo")
-                foo?.parentNode?.localName shouldBe "body"
+                (foo?.parentNode as? Element)?.localName shouldBe "body"
                 nodeExpect(baseDoc.body, foo?.parentNode)
                 nodeExpect(baseDoc.body?.parentNode, baseDoc.documentElement)
                 baseDoc.body?.childNodes?.size shouldBe 3
