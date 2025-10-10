@@ -525,4 +525,28 @@ class DOMParserTest :
                 docFirstChildFirstChildFirstChild.localName shouldBe "clippath"
             }
         }
+
+        describe("Recovery from self-closing tags that have close tags") {
+            it("should handle delayed closing of a tag") {
+                val html = """<div><input><p>I'm in an input</p></input></div>"""
+                val doc = DOMParser().parse(html)
+
+                doc.firstChild.shouldBeInstanceOf<Element>()
+                val docFirstChild = doc.firstChild as Element
+
+                docFirstChild.localName shouldBe "div"
+                docFirstChild.childNodes.size shouldBe 1
+
+                docFirstChild.firstChild.shouldBeInstanceOf<Element>()
+                val docFirstChildFirstChild = docFirstChild.firstChild as Element
+
+                docFirstChildFirstChild.localName shouldBe "input"
+                docFirstChildFirstChild.childNodes.size shouldBe 1
+
+                docFirstChildFirstChild.firstChild.shouldBeInstanceOf<Element>()
+                val docFirstChildFirstChildFirstChild = docFirstChildFirstChild.firstChild as Element
+
+                docFirstChildFirstChildFirstChild.localName shouldBe "p"
+            }
+        }
     })
