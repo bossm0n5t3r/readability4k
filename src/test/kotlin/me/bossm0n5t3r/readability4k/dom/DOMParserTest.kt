@@ -567,4 +567,29 @@ class DOMParserTest :
                 checkBase("//absolute/path", "http://absolute/path")
             }
         }
+
+        describe("namespace workarounds") {
+            it("should handle random namespace information in the serialized DOM") {
+                val html =
+                    """<a0:html><a0:body><a0:DIV><a0:svG><a0:clippath/></a0:svG></a0:DIV></a0:body></a0:html>"""
+                val doc = DOMParser().parse(html)
+                val div = doc.getElementsByTagName("div")[0]
+                div.tagName shouldBe "DIV"
+                div.localName shouldBe "div"
+
+                div.firstChild.shouldBeInstanceOf<Element>()
+                val divFirstChild = div.firstChild as Element
+
+                divFirstChild.tagName shouldBe "SVG"
+                divFirstChild.localName shouldBe "svg"
+
+                divFirstChild.firstChild.shouldBeInstanceOf<Element>()
+                val divFirstChildFirstChild = divFirstChild.firstChild as Element
+
+                divFirstChildFirstChild.tagName shouldBe "CLIPPATH"
+                divFirstChildFirstChild.localName shouldBe "clippath"
+                doc.documentElement shouldBe doc.firstChild
+                doc.body shouldBe doc.documentElement?.firstChild
+            }
+        }
     })
