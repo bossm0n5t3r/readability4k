@@ -7,6 +7,7 @@ class Element(
 
     val matchingTag: String = tag
     var tagName: String
+    var localName: String
 
     init {
         val lastColonIndex = tag.lastIndexOf(':')
