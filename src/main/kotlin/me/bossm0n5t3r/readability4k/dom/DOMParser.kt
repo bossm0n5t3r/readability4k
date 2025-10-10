@@ -7,7 +7,7 @@ class DOMParser {
     private var currentChar: Int = 0
     private val strBuf: StringBuilder = StringBuilder()
     private val retPair: Array<Any?> = arrayOfNulls(2)
-    private var errorState: String = ""
+    var errorState: String = ""
     private lateinit var doc: Document
 
     companion object {
