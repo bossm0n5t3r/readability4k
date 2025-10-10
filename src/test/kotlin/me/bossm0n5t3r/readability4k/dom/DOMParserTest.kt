@@ -549,4 +549,22 @@ class DOMParserTest :
                 docFirstChildFirstChildFirstChild.localName shouldBe "p"
             }
         }
+
+        describe("baseURI parsing") {
+            it("should handle various types of relative and absolute base URIs") {
+                fun checkBase(
+                    base: String,
+                    expectedResult: String,
+                ) {
+                    val html = """<html><head><base href='$base'></base></head><body/></html>"""
+                    val doc = DOMParser().parse(html, "http://fakehost/some/dir/")
+                    doc.baseURI shouldBe expectedResult
+                }
+
+                checkBase("relative/path", "http://fakehost/some/dir/relative/path")
+                checkBase("/path", "http://fakehost/path")
+                checkBase("http://absolute/", "http://absolute/")
+                checkBase("//absolute/path", "http://absolute/path")
+            }
+        }
     })
