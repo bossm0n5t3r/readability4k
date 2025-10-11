@@ -1568,13 +1568,15 @@ object ReadabilityUtils {
                                 current = next
                             } while (true)
 
-                            val fragmentFirstChild = fragment.firstChild
+                            var fragmentFirstChild = fragment.firstChild
                             while (fragmentFirstChild != null && isWhiteSpace(fragmentFirstChild)) {
                                 fragmentFirstChild.remove()
+                                fragmentFirstChild = fragment.firstChild
                             }
-                            val fragmentLastChild = fragment.lastChild
+                            var fragmentLastChild = fragment.lastChild
                             while (fragmentLastChild != null && isWhiteSpace(fragmentLastChild)) {
                                 fragmentLastChild.remove()
+                                fragmentLastChild = fragment.lastChild
                             }
 
                             if (fragment.firstChild != null) {
