@@ -38,7 +38,7 @@ class Readability(
 
         postProcessContent(articleContent, p)
 
-        if (!p.metadata.containsKey("excerpt")) {
+        if (p.metadata["excerpt"].isNullOrBlank()) {
             val excerpt =
                 articleContent
                     .getElementsByTagName("p")
