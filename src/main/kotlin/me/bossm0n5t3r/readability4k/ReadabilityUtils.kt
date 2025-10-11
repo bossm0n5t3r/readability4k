@@ -1227,9 +1227,7 @@ object ReadabilityUtils {
 
         for (jsonLdElement in scripts) {
             if (metadata != null) break
-            if (jsonLdElement.getAttribute("type") != "application/ld+json") {
-                continue
-            }
+            if (jsonLdElement.getAttribute("type") != "application/ld+json") continue
 
             try {
                 val content = jsonLdElement.textContent.replace(Regexps.CDATA_REGEX, "")
@@ -1240,12 +1238,9 @@ object ReadabilityUtils {
                     parsed = parsed.firstOrNull { element ->
                         (element as? JsonObject)
                             ?.get("@type")
-                            ?.let { type ->
-                                (type as? JsonPrimitive)
-                                    ?.contentOrNull
-                                    ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) }
-                            }
-                            ?: false
+                            ?.jsonPrimitive
+                            ?.contentOrNull
+                            ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) } == true
                     } ?: continue
                 }
 
@@ -1255,14 +1250,11 @@ object ReadabilityUtils {
                     when (val context = parsed["@context"]) {
                         is JsonPrimitive -> context.contentOrNull?.let { Regexps.SCHEMA_DOT_ORG_REGEX.containsMatchIn(it) } == true
                         is JsonObject -> {
-                            val vocab = context["@vocab"]
-                            vocab is JsonPrimitive && vocab.contentOrNull?.let {
-                                Regexps.SCHEMA_DOT_ORG_REGEX.containsMatchIn(
-                                    it,
-                                )
-                            } == true
+                            context["@vocab"]
+                                ?.jsonPrimitive
+                                ?.contentOrNull
+                                ?.let { Regexps.SCHEMA_DOT_ORG_REGEX.containsMatchIn(it) } == true
                         }
-
                         else -> false
                     }
 
@@ -1273,9 +1265,8 @@ object ReadabilityUtils {
                     finalParsed = (parsed["@graph"] as JsonArray)
                         .firstOrNull { element ->
                             val typeContentOrEmpty =
-                                (element as? JsonObject)
-                                    ?.get("@type")
-                                    ?.let { it as? JsonPrimitive }
+                                element.jsonObject["@type"]
+                                    ?.jsonPrimitive
                                     ?.contentOrNull
                                     ?: ""
                             Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(typeContentOrEmpty)
@@ -1283,10 +1274,10 @@ object ReadabilityUtils {
                 }
 
                 val typeMatches =
-                    (finalParsed["@type"] as? JsonPrimitive)
+                    finalParsed["@type"]
+                        ?.jsonPrimitive
                         ?.contentOrNull
-                        ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) }
-                        ?: false
+                        ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) } == true
 
                 if (!typeMatches) continue
 
@@ -1300,11 +1291,7 @@ object ReadabilityUtils {
                     val nameMatches = textSimilarity(name, title) > SIMILARITY_THRESHOLD
                     val headlineMatches = textSimilarity(headline, title) > SIMILARITY_THRESHOLD
 
-                    metadata["title"] =
-                        when {
-                            headlineMatches && !nameMatches -> headline
-                            else -> name
-                        }
+                    metadata["title"] = if (headlineMatches && !nameMatches) headline else name
                 } else if (name != null) {
                     metadata["title"] = name.trim()
                 } else if (headline != null) {
@@ -1337,20 +1324,22 @@ object ReadabilityUtils {
                     else -> {}
                 }
 
-                finalParsed["description"]?.jsonPrimitive?.contentOrNull?.let {
-                    metadata["excerpt"] = it.trim()
-                }
+                finalParsed["description"]
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?.let { metadata["excerpt"] = it.trim() }
 
-                val publisher = finalParsed["publisher"]
-                if (publisher is JsonObject) {
-                    publisher["name"]?.jsonPrimitive?.contentOrNull?.let {
-                        metadata["siteName"] = it.trim()
-                    }
-                }
+                finalParsed["publisher"]
+                    ?.jsonObject
+                    ?.get("name")
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?.let { metadata["siteName"] = it.trim() }
 
-                finalParsed["datePublished"]?.jsonPrimitive?.contentOrNull?.let {
-                    metadata["datePublished"] = it.trim()
-                }
+                finalParsed["datePublished"]
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?.let { metadata["datePublished"] = it.trim() }
             } catch (e: Exception) {
                 LOGGER.warn("Failed to parse JSON-LD: ${e.message}")
             }
