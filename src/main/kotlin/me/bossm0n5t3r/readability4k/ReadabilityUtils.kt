@@ -15,6 +15,7 @@ import me.bossm0n5t3r.readability4k.dom.Element
 import me.bossm0n5t3r.readability4k.dom.HtmlEntities.decodeHTML
 import me.bossm0n5t3r.readability4k.dom.Node
 import me.bossm0n5t3r.readability4k.dom.NodeType
+import me.bossm0n5t3r.readability4k.dom.ReadabilityData
 import java.math.BigDecimal
 import java.net.URI
 
@@ -1435,12 +1436,17 @@ object ReadabilityUtils {
 
     private const val DATA_READABILITY_CONTENT_SCORE = "data-readability-content-score"
 
-    private fun Element.hasContentScore(): Boolean = this.hasAttribute(DATA_READABILITY_CONTENT_SCORE)
+    private fun Element.hasContentScore(): Boolean = this.readability != null
 
-    private fun Element.getContentScore(): Double = this.getAttribute(DATA_READABILITY_CONTENT_SCORE)?.toDoubleOrNull() ?: 0.0
+    private fun Element.getContentScore(): Double = this.readability?.contentScore ?: 0.0
 
     private fun Element.setContentScore(score: Double = 0.0) {
-        this.setAttribute(DATA_READABILITY_CONTENT_SCORE, score.toString())
+        val readabilityData = this.readability
+        if (readabilityData == null) {
+            this.readability = ReadabilityData(score)
+            return
+        }
+        readabilityData.contentScore = score
     }
 
     fun grabArticle(

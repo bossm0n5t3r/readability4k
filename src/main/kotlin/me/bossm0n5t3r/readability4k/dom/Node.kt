@@ -4,6 +4,7 @@ abstract class Node {
     abstract val nodeType: NodeType
     abstract val nodeName: String
 
+    var readability: ReadabilityData? = null
     var parentNode: Node? = null
     var previousSibling: Node? = null
     var nextSibling: Node? = null
