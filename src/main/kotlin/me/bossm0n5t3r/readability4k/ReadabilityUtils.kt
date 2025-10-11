@@ -574,7 +574,7 @@ object ReadabilityUtils {
                 pElement.parentNode?.let { parent ->
                     val element = parent as? Element
                     if (element != null && element.tagName == "P") {
-                        setNodeTag(element, "DIV")
+                        setNodeTag(parent, "DIV")
                     }
                 }
             }
