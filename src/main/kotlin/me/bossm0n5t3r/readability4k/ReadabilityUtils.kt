@@ -83,7 +83,7 @@ object ReadabilityUtils {
                 node.textContent
                     .trim()
                     .isEmpty()
-        ) || (node.nodeType == NodeType.ELEMENT_NODE && element != null && element.tagName.equals("br", ignoreCase = true))
+        ) || (node.nodeType == NodeType.ELEMENT_NODE && element != null && element.tagName == "BR")
     }
 
     fun isUrl(string: String) =
@@ -154,7 +154,7 @@ object ReadabilityUtils {
         element: Element,
         p: ReadabilityProperties,
     ): Boolean {
-        if (element.tagName.equals("h1", ignoreCase = true).not() && element.tagName.equals("h2", ignoreCase = true).not()) {
+        if (element.tagName != "H1" && element.tagName != "H2") {
             return false
         }
         val heading = getInnerText(element, false)
@@ -427,11 +427,7 @@ object ReadabilityUtils {
             val parent = node.parentNode
 
             if (parent != null &&
-                (
-                    node.tagName.equals("DIV", ignoreCase = true) ||
-                        node.tagName
-                            .equals("SECTION", ignoreCase = true)
-                ) &&
+                (node.tagName == "DIV" || node.tagName == "SECTION") &&
                 !(node.id.isNotEmpty() && node.id.startsWith("readability"))
             ) {
                 if (isElementWithoutContent(node)) {
@@ -536,7 +532,7 @@ object ReadabilityUtils {
 
             while (true) {
                 next = nextNode(next)
-                if (next == null || next !is Element || !next.tagName.equals("BR", ignoreCase = true)) {
+                if (next == null || next !is Element || next.tagName != "BR") {
                     break
                 }
 
@@ -552,9 +548,9 @@ object ReadabilityUtils {
 
                 next = pElement.nextSibling
                 while (next != null) {
-                    if (next is Element && next.tagName.equals("BR", ignoreCase = true)) {
+                    if (next is Element && next.tagName == "BR") {
                         val nextElem = nextNode(next.nextSibling) as? Element
-                        if (nextElem != null && nextElem.tagName.equals("BR", ignoreCase = true)) {
+                        if (nextElem != null && nextElem.tagName == "BR") {
                             break
                         }
                     }
@@ -576,7 +572,7 @@ object ReadabilityUtils {
 
                 pElement.parentNode?.let { parent ->
                     val element = parent as? Element
-                    if (element != null && element.tagName.equals("P", ignoreCase = true)) {
+                    if (element != null && element.tagName == "P") {
                         setNodeTag(element, "DIV")
                     }
                 }
@@ -588,7 +584,7 @@ object ReadabilityUtils {
         var current = node
 
         while (current != null) {
-            if (current.tagName.equals("IMG", ignoreCase = true)) {
+            if (current.tagName == "IMG") {
                 return true
             }
 
@@ -758,7 +754,7 @@ object ReadabilityUtils {
             }
 
             val parent = currentNode.parentNode as? Element
-            if (parent?.tagName?.uppercase() == normalizedTagName && (filterFn == null || filterFn(parent))) {
+            if (parent?.tagName == normalizedTagName && (filterFn == null || filterFn(parent))) {
                 return true
             }
 
@@ -826,7 +822,7 @@ object ReadabilityUtils {
     ) {
         node.setContentScore()
 
-        val tagName = node.tagName.uppercase()
+        val tagName = node.tagName
 
         val contentScore =
             when (tagName) {
@@ -920,7 +916,7 @@ object ReadabilityUtils {
 
             if (prevElement != null && isSingleImage(prevElement)) {
                 var prevImg = prevElement
-                if (prevImg.tagName != "img") {
+                if (prevImg.tagName != "IMG") {
                     prevImg = prevElement.getElementsByTagName("img").firstOrNull()
                 }
                 requireNotNull(prevImg) { "Previous element should not be null" }
@@ -1525,8 +1521,8 @@ object ReadabilityUtils {
                         !Regexps.OK_MAYBE_ITS_A_CANDIDATE.containsMatchIn(matchString) &&
                         !hasAncestorTag(node, "table") &&
                         !hasAncestorTag(node, "code") &&
-                        node.tagName != "body" &&
-                        node.tagName != "a"
+                        node.tagName != "BODY" &&
+                        node.tagName != "A"
                     ) {
                         LOGGER.info("Removing unlikely candidate - {}", matchString)
                         node = removeAndGetNext(node)
@@ -1540,7 +1536,7 @@ object ReadabilityUtils {
                     }
                 }
 
-                if (node.tagName in setOf("div", "section", "header", "h1", "h2", "h3", "h4", "h5", "h6") &&
+                if (node.tagName in setOf("DIV", "SECTION", "HEADER", "H1", "H2", "H3", "H4", "H5", "H6") &&
                     isElementWithoutContent(node)
                 ) {
                     node = removeAndGetNext(node)
@@ -1711,7 +1707,7 @@ object ReadabilityUtils {
                 if (alternativeCandidateAncestors.size >= minimumTopCandidates) {
                     parentOfTopCandidate = topCandidate.parentNode as? Element
 
-                    while (parentOfTopCandidate != null && parentOfTopCandidate.tagName != "body") {
+                    while (parentOfTopCandidate != null && parentOfTopCandidate.tagName != "BODY") {
                         var listsContainingThisAncestor = 0
 
                         for (ancestors in alternativeCandidateAncestors) {
@@ -1739,7 +1735,7 @@ object ReadabilityUtils {
                 var lastScore = topCandidate?.getContentScore() ?: 0.0
                 val scoreThreshold = lastScore / 3
 
-                while (parentOfTopCandidate != null && parentOfTopCandidate.tagName != "body") {
+                while (parentOfTopCandidate != null && parentOfTopCandidate.tagName != "BODY") {
                     if (!parentOfTopCandidate.hasContentScore()) {
                         parentOfTopCandidate = parentOfTopCandidate.parentNode as? Element
                         continue
@@ -1759,7 +1755,7 @@ object ReadabilityUtils {
 
                 parentOfTopCandidate = topCandidate?.parentNode as? Element
                 while (parentOfTopCandidate != null &&
-                    parentOfTopCandidate.tagName != "body" &&
+                    parentOfTopCandidate.tagName != "BODY" &&
                     parentOfTopCandidate.children.size == 1
                 ) {
                     topCandidate = parentOfTopCandidate
