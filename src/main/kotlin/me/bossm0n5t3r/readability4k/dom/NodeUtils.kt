@@ -214,7 +214,7 @@ object NodeUtils {
     ): Boolean =
         when (selector) {
             is SimpleSelector.All -> true
-            is SimpleSelector.Tag -> element.tagName == selector.name
+            is SimpleSelector.Tag -> element.tagName == selector.name.uppercase()
             is SimpleSelector.Id -> element.id == selector.id
             is SimpleSelector.Class -> element.hasClass(selector.className)
             is SimpleSelector.Attribute -> element.hasAttribute(selector.name)

@@ -62,10 +62,10 @@ object ReadabilityUtils {
      */
     fun isPhrasingContent(node: Node): Boolean {
         val element = node as? Element
-        val tagName = element?.tagName?.lowercase()
+        val tagName = element?.tagName
         return node.nodeType == NodeType.TEXT_NODE ||
             tagName in PHRASING_ELEMS ||
-            ((tagName == "a" || tagName == "del" || tagName == "ins") && element.children.all { isPhrasingContent(it) })
+            ((tagName == "A" || tagName == "DEL" || tagName == "INS") && element.childNodes.all { isPhrasingContent(it) })
     }
 
     /**
@@ -406,7 +406,7 @@ object ReadabilityUtils {
     }
 
     fun cleanStyles(element: Element?) {
-        if (element == null || element.tagName.lowercase() == "svg") {
+        if (element == null || element.tagName == "SVG") {
             return
         }
 
@@ -782,7 +782,7 @@ object ReadabilityUtils {
                     return@removeNodes false
                 }
 
-                if (element.tagName == "object" && p.allowedVideoRegex.containsMatchIn(element.innerHTML)) {
+                if (element.tagName == "OBJECT" && p.allowedVideoRegex.containsMatchIn(element.innerHTML)) {
                     return@removeNodes false
                 }
             }
@@ -998,9 +998,9 @@ object ReadabilityUtils {
                     }
 
                 if (copyTo != null) {
-                    when (elem.tagName.lowercase()) {
-                        "img", "picture" -> elem.setAttribute(copyTo, attr.value)
-                        "figure" -> {
+                    when (elem.tagName) {
+                        "IMG", "PICTURE" -> elem.setAttribute(copyTo, attr.value)
+                        "FIGURE" -> {
                             if (getAllNodesWithTag(elem, listOf("img", "picture")).isEmpty()) {
                                 val img = p.document.createElement("img")
                                 img.setAttribute(copyTo, attr.value)
@@ -1146,7 +1146,7 @@ object ReadabilityUtils {
                 for (embed in embeds) {
                     val hasAllowedVideo =
                         embed.attributes.any { p.allowedVideoRegex.containsMatchIn(it.value) } ||
-                            (embed.tagName == "object" && p.allowedVideoRegex.containsMatchIn(embed.innerHTML))
+                            (embed.tagName == "OBJECT" && p.allowedVideoRegex.containsMatchIn(embed.innerHTML))
                     if (hasAllowedVideo) {
                         return@removeNodes false
                     }
@@ -1407,7 +1407,7 @@ object ReadabilityUtils {
 
         getAllNodesWithTag(articleContent, listOf("br")).forEach { br ->
             val next = nextNode(br.nextElementSibling)
-            if (next != null && next is Element && next.tagName == "p") {
+            if (next != null && next is Element && next.tagName == "P") {
                 br.remove()
             }
         }
@@ -1472,7 +1472,7 @@ object ReadabilityUtils {
             var shouldRemoveTitleHeader = true
 
             while (node != null) {
-                if (node.tagName == "html") {
+                if (node.tagName == "HTML") {
                     p.articleLang = node.getAttribute("lang")
                 }
 
@@ -1551,7 +1551,7 @@ object ReadabilityUtils {
                     elementsToScore.add(node)
                 }
 
-                if (node.tagName == "div") {
+                if (node.tagName == "DIV") {
                     var childNode: Node? = node.firstChild
 
                     while (childNode != null) {
@@ -1680,7 +1680,7 @@ object ReadabilityUtils {
             var neededToCreateTopCandidate = false
             var parentOfTopCandidate: Element?
 
-            if (topCandidate == null || topCandidate.tagName == "body") {
+            if (topCandidate == null || topCandidate.tagName == "BODY") {
                 topCandidate = document.createElement("div")
                 neededToCreateTopCandidate = true
 
@@ -1801,7 +1801,7 @@ object ReadabilityUtils {
 
                     if (sibling.hasContentScore() && sibling.getContentScore() + contentBonus >= siblingScoreThreshold) {
                         append = true
-                    } else if (sibling.tagName == "p") {
+                    } else if (sibling.tagName == "P") {
                         val linkDensity = getLinkDensity(sibling)
                         val nodeContent = getInnerText(sibling)
                         val nodeLength = nodeContent.length
