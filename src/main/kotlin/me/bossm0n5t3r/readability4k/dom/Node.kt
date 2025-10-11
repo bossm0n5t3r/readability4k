@@ -68,7 +68,7 @@ abstract class Node {
         val parent = parentNode ?: return this
 
         val childIndex = parent.childNodes.indexOf(this)
-        require(childIndex != -1) { "removeChild: node not found" }
+        require(childIndex != -1) { "Failed Node.remove(): node not found" }
 
         this.parentNode = null
 
