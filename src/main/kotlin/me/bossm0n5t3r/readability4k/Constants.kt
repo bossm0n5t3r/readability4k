@@ -17,15 +17,15 @@ const val DEFAULT_CHAR_THRESHOLD = 500
 // Element tags to score by default
 val DEFAULT_TAGS_TO_SCORE =
     setOf(
-        "section",
-        "h2",
-        "h3",
-        "h4",
-        "h5",
-        "h6",
-        "p",
-        "td",
-        "pre",
+        "SECTION",
+        "H2",
+        "H3",
+        "H4",
+        "H5",
+        "H6",
+        "P",
+        "TD",
+        "PRE",
     )
 
 // Roles that are unlikely to contain article content
@@ -43,26 +43,26 @@ val UNLIKELY_ROLES =
 // Elements that can be converted from DIV to P
 val DIV_TO_P_ELEMS =
     setOf(
-        "blockquote",
-        "dl",
-        "div",
-        "img",
-        "ol",
-        "p",
-        "pre",
-        "table",
-        "ul",
+        "BLOCKQUOTE",
+        "DL",
+        "DIV",
+        "IMG",
+        "OL",
+        "P",
+        "PRE",
+        "TABLE",
+        "UL",
     )
 
 // Exceptions when altering elements to DIV
 val ALTER_TO_DIV_EXCEPTIONS =
     setOf(
-        "div",
-        "article",
-        "section",
-        "p",
-        "ol",
-        "ul",
+        "DIV",
+        "ARTICLE",
+        "SECTION",
+        "P",
+        "OL",
+        "UL",
     )
 
 // Presentational attributes that should be removed
@@ -85,11 +85,11 @@ val PRESENTATIONAL_ATTRIBUTES =
 // Elements with deprecated size attributes
 val DEPRECATED_SIZE_ATTRIBUTE_ELEMS =
     setOf(
-        "table",
-        "th",
-        "td",
-        "hr",
-        "pre",
+        "TABLE",
+        "TH",
+        "TD",
+        "HR",
+        "PRE",
     )
 
 // Phrasing elements (inline content)
