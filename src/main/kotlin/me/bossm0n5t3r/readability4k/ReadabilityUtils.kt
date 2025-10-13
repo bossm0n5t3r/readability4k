@@ -955,9 +955,8 @@ object ReadabilityUtils {
         p: ReadabilityProperties,
     ) {
         getAllNodesWithTag(root, listOf("img", "picture", "figure")).forEach { elem ->
-            val srcAttr = elem.getAttribute("src")
-            if (srcAttr != null && Regexps.B64_DATA_URL.containsMatchIn(srcAttr)) {
-                val parts = Regexps.B64_DATA_URL.find(srcAttr)
+            if (elem.src.isNotEmpty() && Regexps.B64_DATA_URL.containsMatchIn(elem.src)) {
+                val parts = Regexps.B64_DATA_URL.find(elem.src)
 
                 if (parts?.groupValues[1] != "image/svg+xml") {
                     val srcCouldBeRemoved =
@@ -967,7 +966,7 @@ object ReadabilityUtils {
 
                     if (srcCouldBeRemoved) {
                         val dataUrlHeaderLength = parts?.groupValues[0]?.length ?: 0
-                        val b64length = srcAttr.length - dataUrlHeaderLength
+                        val b64length = elem.src.length - dataUrlHeaderLength
                         if (b64length < 133) {
                             elem.removeAttribute("src")
                         }
