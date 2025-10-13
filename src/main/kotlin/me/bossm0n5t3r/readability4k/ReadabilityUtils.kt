@@ -1546,18 +1546,16 @@ object ReadabilityUtils {
                     var childNode: Node? = node.firstChild
 
                     while (childNode != null) {
-                        val nextSibling = childNode.nextSibling
+                        var nextSibling = childNode.nextSibling
 
                         if (isPhrasingContent(childNode)) {
                             val fragment = document.createDocumentFragment()
-                            var current: Node = childNode
 
                             do {
-                                fragment.appendChild(current)
-                                val next = current.nextSibling ?: break
-                                if (!isPhrasingContent(next)) break
-                                current = next
-                            } while (true)
+                                nextSibling = childNode!!.nextSibling
+                                fragment.appendChild(childNode)
+                                childNode = nextSibling
+                            } while (nextSibling != null && isPhrasingContent(nextSibling))
 
                             var fragmentFirstChild = fragment.firstChild
                             while (fragmentFirstChild != null && isWhiteSpace(fragmentFirstChild)) {
@@ -1575,10 +1573,8 @@ object ReadabilityUtils {
                                 p.appendChild(fragment)
                                 node.insertBefore(p, nextSibling)
                             }
-                            childNode = current.nextSibling
-                        } else {
-                            childNode = nextSibling
                         }
+                        childNode = nextSibling
                     }
 
                     if (hasSingleTagInsideElement(node, "p") &&
