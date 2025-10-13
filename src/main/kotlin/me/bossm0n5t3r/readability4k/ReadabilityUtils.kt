@@ -981,7 +981,8 @@ object ReadabilityUtils {
                 return@forEach
             }
 
-            for (attr in elem.attributes) {
+            for (i in 0 until elem.attributes.size) {
+                val attr = elem.attributes[i]
                 if (attr.name in setOf("src", "srcset", "alt")) {
                     continue
                 }
