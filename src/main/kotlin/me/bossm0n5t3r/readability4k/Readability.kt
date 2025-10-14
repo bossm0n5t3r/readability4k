@@ -53,7 +53,7 @@ class Readability(
         val textContent = articleContent.textContent
         return ReadabilityResult(
             title = p.articleTitle,
-            byline = p.metadata["byline"] ?: p.articleByline,
+            byline = p.metadata["byline"]?.takeIf { it.isNotBlank() } ?: p.articleByline,
             dir = p.articleDir,
             lang = p.articleLang,
             content = p.serializer(articleContent),
