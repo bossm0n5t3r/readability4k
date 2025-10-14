@@ -1329,12 +1329,14 @@ object ReadabilityUtils {
                     ?.contentOrNull
                     ?.let { metadata["excerpt"] = it.trim() }
 
-                finalParsed["publisher"]
-                    ?.jsonObject
-                    ?.get("name")
-                    ?.jsonPrimitive
-                    ?.contentOrNull
-                    ?.let { metadata["siteName"] = it.trim() }
+                if (finalParsed["publisher"] is JsonObject) {
+                    finalParsed["publisher"]
+                        ?.jsonObject
+                        ?.get("name")
+                        ?.jsonPrimitive
+                        ?.contentOrNull
+                        ?.let { metadata["siteName"] = it.trim() }
+                }
 
                 finalParsed["datePublished"]
                     ?.jsonPrimitive
