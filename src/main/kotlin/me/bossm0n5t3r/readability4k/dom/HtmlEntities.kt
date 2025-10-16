@@ -1,4 +1,4 @@
-package me.bossm0n5t3r.readability4k.jsdom
+package me.bossm0n5t3r.readability4k.dom
 
 object HtmlEntities {
     private val HTML_ENTITY_PATTERN = Regex("&(quot|amp|apos|lt|gt);")
@@ -47,17 +47,17 @@ object HtmlEntities {
                 val dec = match.groupValues[2]
                 val num =
                     if (hex.isNotEmpty()) {
-                        hex.toInt(16)
+                        hex.toLong(16)
                     } else {
-                        dec.toInt()
+                        dec.toLong()
                     }
 
                 val validNum =
                     when {
-                        num == 0 || num > 0x10FFFF || (num in 0xD800..0xDFFF) -> 0xFFFD
+                        num == 0L || num > 0x10FFFF || (num in 0xD800..0xDFFF) -> 0xFFFD
                         else -> num
                     }
 
-                String(Character.toChars(validNum))
+                String(Character.toChars(validNum.toInt()))
             }
 }

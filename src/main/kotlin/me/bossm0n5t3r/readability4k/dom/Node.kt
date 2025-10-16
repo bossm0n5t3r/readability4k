@@ -1,15 +1,15 @@
-package me.bossm0n5t3r.readability4k.jsdom
+package me.bossm0n5t3r.readability4k.dom
 
 abstract class Node {
     abstract val nodeType: NodeType
     abstract val nodeName: String
 
+    var readability: ReadabilityData? = null
     var parentNode: Node? = null
     var previousSibling: Node? = null
     var nextSibling: Node? = null
 
     val childNodes: MutableList<Node> = mutableListOf()
-    var localName: String? = null
 
     open val textContent: String
         get() {
@@ -69,7 +69,7 @@ abstract class Node {
         val parent = parentNode ?: return this
 
         val childIndex = parent.childNodes.indexOf(this)
-        require(childIndex != -1) { "removeChild: node not found" }
+        require(childIndex != -1) { "Failed Node.remove(): node not found" }
 
         this.parentNode = null
 

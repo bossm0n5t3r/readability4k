@@ -1,4 +1,4 @@
-package me.bossm0n5t3r.readability4k.jsdom
+package me.bossm0n5t3r.readability4k.dom
 
 class Element(
     tag: String,
@@ -6,7 +6,8 @@ class Element(
     override val nodeType = NodeType.ELEMENT_NODE
 
     val matchingTag: String = tag
-    val tagName: String
+    var tagName: String
+    var localName: String
 
     init {
         val lastColonIndex = tag.lastIndexOf(':')
@@ -55,6 +56,15 @@ class Element(
     var srcset: String
         get() = getAttribute("srcset") ?: ""
         set(value) = setAttribute("srcset", value)
+
+    fun hasClass(className: String): Boolean {
+        val classAttr = this.className.trim()
+        if (classAttr.isEmpty()) return false
+        val classes = classAttr.split(Regex("\\s+"))
+        return className in classes
+    }
+
+    fun querySelectorAll(selector: String): List<Element> = NodeUtils.querySelectorAll(this, selector)
 
     fun getAttribute(name: String): String? = attributes.findLast { it.name == name }?.value
 
@@ -123,7 +133,7 @@ class Element(
             return builder.toString()
         }
         set(html) {
-            val parser = JSDOMParser()
+            val parser = DOMParser()
             val node = parser.parse(html)
 
             childNodes.forEach { it.parentNode = null }

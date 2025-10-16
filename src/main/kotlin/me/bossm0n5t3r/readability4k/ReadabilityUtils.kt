@@ -10,12 +10,12 @@ import kotlinx.serialization.json.jsonPrimitive
 import me.bossm0n5t3r.readability4k.Regexps.IMAGE_EXTENSION_REGEX
 import me.bossm0n5t3r.readability4k.Regexps.IMAGE_URL_REGEX
 import me.bossm0n5t3r.readability4k.Regexps.SRCSET_CANDIDATE_REGEX
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
-import org.jsoup.nodes.Node
-import org.jsoup.nodes.TextNode
-import org.jsoup.select.Elements
+import me.bossm0n5t3r.readability4k.dom.Document
+import me.bossm0n5t3r.readability4k.dom.Element
+import me.bossm0n5t3r.readability4k.dom.HtmlEntities.decodeHTML
+import me.bossm0n5t3r.readability4k.dom.Node
+import me.bossm0n5t3r.readability4k.dom.NodeType
+import me.bossm0n5t3r.readability4k.dom.ReadabilityData
 import java.math.BigDecimal
 import java.net.URI
 
@@ -32,9 +32,9 @@ object ReadabilityUtils {
         normalizeSpaces: Boolean = true,
     ): String =
         if (normalizeSpaces) {
-            element.text().replace(Regexps.NORMALIZE, " ")
+            element.textContent.replace(Regexps.NORMALIZE, " ")
         } else {
-            element.text()
+            element.textContent
         }
 
     /**
@@ -44,19 +44,18 @@ object ReadabilityUtils {
         val textLength = getInnerText(element).length
         if (textLength == 0) return BigDecimal.ZERO
         val linkLength =
-            element.getElementsByTag("a").sumOf { linkNode ->
-                val href = linkNode.attr("href")
-                val coefficient = if (href.isNotBlank() && href.matches(Regexps.HASH_URL)) BigDecimal.valueOf(0.3) else BigDecimal.ONE
+            element.getElementsByTagName("a").sumOf { linkNode ->
+                val href = linkNode.getAttribute("href").orEmpty()
+                val coefficient =
+                    if (href.isNotBlank() && href.matches(Regexps.HASH_URL)) BigDecimal.valueOf(0.3) else BigDecimal.ONE
                 getInnerText(linkNode).length.toBigDecimal() * coefficient
             }
         return linkLength / textLength.toBigDecimal()
     }
 
-    fun Elements.everyNode(predicate: (Element) -> Boolean): Boolean = this.all(predicate)
-
     fun List<Node>.everyNode(predicate: (Node) -> Boolean): Boolean = this.all(predicate)
 
-    fun Elements.someNode(predicate: (Element) -> Boolean): Boolean = this.any(predicate)
+    fun List<Element>.someNode(predicate: (Element) -> Boolean): Boolean = this.any(predicate)
 
     /**
      * Determine if a node qualifies as phrasing content.
@@ -64,10 +63,10 @@ object ReadabilityUtils {
      */
     fun isPhrasingContent(node: Node): Boolean {
         val element = node as? Element
-        val tagName = element?.tagName()?.uppercase()
-        return node is TextNode ||
+        val tagName = element?.tagName
+        return node.nodeType == NodeType.TEXT_NODE ||
             tagName in PHRASING_ELEMS ||
-            ((tagName == "A" || tagName == "DEL" || tagName == "INS") && element.children().all { isPhrasingContent(it) })
+            ((tagName == "A" || tagName == "DEL" || tagName == "INS") && element.childNodes.all { isPhrasingContent(it) })
     }
 
     /**
@@ -80,7 +79,12 @@ object ReadabilityUtils {
 
     fun isWhiteSpace(node: Node): Boolean {
         val element = node as? Element
-        return (node is TextNode && node.text().trim().isEmpty()) || (element != null && element.tagName() == "BR")
+        return (
+            node.nodeType == NodeType.TEXT_NODE &&
+                node.textContent
+                    .trim()
+                    .isEmpty()
+        ) || (node.nodeType == NodeType.ELEMENT_NODE && element != null && element.tagName == "BR")
     }
 
     fun isUrl(string: String) =
@@ -100,26 +104,25 @@ object ReadabilityUtils {
         element: Element,
         tag: String,
     ): Boolean {
-        if (element.children().size != 1 || element
-                .children()
+        if (element.children.size != 1 || element.children
                 .firstOrNull()
-                ?.tagName()
+                ?.tagName
                 ?.equals(tag, ignoreCase = true) != true
         ) {
             return false
         }
-        return element.childNodes().none { it is TextNode && it.text().isNotBlank() }
+        return element.childNodes.none { it.nodeType == NodeType.TEXT_NODE && Regexps.HAS_CONTENT.containsMatchIn(it.textContent) }
     }
+
+    fun getAllNodesWithTag(
+        document: Document,
+        tagNames: List<String>,
+    ): List<Element> = tagNames.flatMap { document.getElementsByTagName(it) }
 
     fun getAllNodesWithTag(
         node: Element,
         tagNames: List<String>,
-    ): Elements =
-        if (tagNames.isNotEmpty()) {
-            node.select(tagNames.joinToString(","))
-        } else {
-            Elements()
-        }
+    ): List<Element> = tagNames.flatMap { node.getElementsByTagName(it) }
 
     fun textSimilarity(
         textA: String,
@@ -142,7 +145,8 @@ object ReadabilityUtils {
         }
 
         val uniqTokensB = tokensB.filter { token -> !tokensA.contains(token) }
-        val distanceB = uniqTokensB.joinToString(" ").length.toBigDecimal() / tokensB.joinToString(" ").length.toBigDecimal()
+        val distanceB =
+            uniqTokensB.joinToString(" ").length.toBigDecimal() / tokensB.joinToString(" ").length.toBigDecimal()
 
         return BigDecimal.ONE - distanceB
     }
@@ -151,7 +155,7 @@ object ReadabilityUtils {
         element: Element,
         p: ReadabilityProperties,
     ): Boolean {
-        if (element.tagName() != "H1" && element.tagName() != "H2") {
+        if (element.tagName != "H1" && element.tagName != "H2") {
             return false
         }
         val heading = getInnerText(element, false)
@@ -164,7 +168,7 @@ object ReadabilityUtils {
     }
 
     fun removeNodes(
-        elements: Elements,
+        elements: List<Element>,
         filterFn: ((Element) -> Boolean)? = null,
     ) {
         val nodeList = elements.toList()
@@ -174,7 +178,7 @@ object ReadabilityUtils {
         }
         for (i in nodeList.size - 1 downTo 0) {
             val node = nodeList[i]
-            val parentNode = node.parent()
+            val parentNode = node.parentNode
             if (parentNode != null) {
                 if (filterFn(node)) {
                     node.remove()
@@ -205,20 +209,20 @@ object ReadabilityUtils {
 
         var weight = 0
 
-        if (element.className().isNotBlank()) {
-            if (Regexps.NEGATIVE.containsMatchIn(element.className())) {
+        if (element.className.isNotBlank()) {
+            if (Regexps.NEGATIVE.containsMatchIn(element.className)) {
                 weight -= 25
             }
-            if (Regexps.POSITIVE.containsMatchIn(element.className())) {
+            if (Regexps.POSITIVE.containsMatchIn(element.className)) {
                 weight += 25
             }
         }
 
-        if (element.id().isNotBlank()) {
-            if (Regexps.NEGATIVE.containsMatchIn(element.id())) {
+        if (element.id.isNotBlank()) {
+            if (Regexps.NEGATIVE.containsMatchIn(element.id)) {
                 weight -= 25
             }
-            if (Regexps.POSITIVE.containsMatchIn(element.id())) {
+            if (Regexps.POSITIVE.containsMatchIn(element.id)) {
                 weight += 25
             }
         }
@@ -256,9 +260,9 @@ object ReadabilityUtils {
         element: Element,
         matchString: String,
     ): Boolean {
-        val rel = element.attr("rel")
-        val itemprop = element.attr("itemprop")
-        val bylineLength = element.text().trim().length
+        val rel = element.getAttribute("rel")
+        val itemprop = element.getAttribute("itemprop").orEmpty()
+        val bylineLength = element.textContent.trim().length
 
         val hasAuthorRel = rel == "author"
         val hasAuthorItemprop = itemprop.isNotEmpty() && itemprop.contains("author")
@@ -269,25 +273,27 @@ object ReadabilityUtils {
         return hasAuthorInfo && bylineLength in 1..99
     }
 
-    fun removeScripts(doc: Element) {
+    fun removeScripts(doc: Document) {
         removeNodes(getAllNodesWithTag(doc, listOf("script", "noscript")))
     }
 
     fun hasChildBlockElement(element: Element): Boolean =
-        element.children().someNode {
-            DIV_TO_P_ELEMS.contains(it.tagName()) || hasChildBlockElement(it)
+        element.children.someNode {
+            DIV_TO_P_ELEMS.contains(it.tagName) || hasChildBlockElement(it)
         }
 
-    fun isElementWithoutContent(element: Element): Boolean {
-        if (element.text().trim().isNotEmpty()) return false
+    fun isElementWithoutContent(node: Node): Boolean {
+        if (node.nodeType != NodeType.ELEMENT_NODE) return false
+        val element = node as Element
+        if (element.textContent.trim().isNotEmpty()) return false
 
-        val children = element.children()
-        return children.isEmpty() || children.size == element.getElementsByTag("br").size + element.getElementsByTag("hr").size
+        val children = element.children
+        return children.isEmpty() || children.size == element.getElementsByTagName("br").size + element.getElementsByTagName("hr").size
     }
 
     fun isProbablyVisible(element: Element): Boolean {
-        val style = element.attr("style")
-        if (style.contains("visibility:hidden") || style.contains("visibility: hidden")) {
+        val style = element.getAttribute("style")
+        if (style != null && (style.contains("visibility:hidden") || style.contains("visibility: hidden"))) {
             return false
         }
         return isNodeVisible(element)
@@ -297,18 +303,18 @@ object ReadabilityUtils {
         element: Element,
         ignoreSelfAndKids: Boolean = false,
     ): Element? {
-        if (!ignoreSelfAndKids && element.children().isNotEmpty()) {
-            return element.children().first()
+        if (!ignoreSelfAndKids && element.firstElementChild != null) {
+            return element.firstElementChild
         }
 
-        element.nextElementSibling()?.let { return it }
+        element.nextElementSibling?.let { return it }
 
-        var parent = element.parent()
-        while (parent != null && parent.nextElementSibling() == null) {
-            parent = parent.parent()
+        var parent = element.parentNode
+        while (parent != null && parent is Element && parent.nextElementSibling == null) {
+            parent = parent.parentNode
         }
 
-        return parent?.nextElementSibling()
+        return (parent as? Element)?.nextElementSibling
     }
 
     fun removeAndGetNext(element: Element): Element? {
@@ -322,8 +328,8 @@ object ReadabilityUtils {
         p: ReadabilityProperties,
     ) {
         val document = p.document
-        val baseURI = document.baseUri()
-        val documentURI = document.location()
+        val baseURI = document.baseURI
+        val documentURI = document.documentURI
 
         fun toAbsoluteURI(uri: String): String {
             if (baseURI == documentURI && uri.startsWith("#")) {
@@ -339,24 +345,24 @@ object ReadabilityUtils {
 
         val links = getAllNodesWithTag(articleContent, listOf("a"))
         links.forEach { link ->
-            val href = link.attr("href")
+            val href = link.getAttribute("href").orEmpty()
             if (href.isNotBlank()) {
                 if (href.startsWith("javascript:")) {
-                    val childNodes = link.childNodes()
-                    if (childNodes.size == 1 && childNodes.first() is TextNode) {
-                        val textNode = TextNode(link.text())
-                        link.replaceWith(textNode)
+                    val childNodes = link.childNodes
+                    if (childNodes.size == 1 && childNodes.first().nodeType == NodeType.TEXT_NODE) {
+                        val textNode = document.createTextNode(link.textContent)
+                        link.parentNode?.replaceChild(textNode, link)
                     } else {
-                        val container = Element("span")
-                        val children = link.childNodes().toList()
+                        val container = document.createElement("span")
+                        val children = link.childNodes.toList()
                         for (child in children) {
                             child.remove()
                             container.appendChild(child)
                         }
-                        link.replaceWith(container)
+                        link.parentNode?.replaceChild(container, link)
                     }
                 } else {
-                    link.attr("href", toAbsoluteURI(href))
+                    link.setAttribute("href", toAbsoluteURI(href))
                 }
             }
         }
@@ -375,16 +381,16 @@ object ReadabilityUtils {
             )
 
         medias.forEach { media ->
-            val src = media.attr("src")
-            val poster = media.attr("poster")
-            val srcset = media.attr("srcset")
+            val src = media.getAttribute("src").orEmpty()
+            val poster = media.getAttribute("poster").orEmpty()
+            val srcset = media.getAttribute("srcset").orEmpty()
 
             if (src.isNotBlank()) {
-                media.attr("src", toAbsoluteURI(src))
+                media.setAttribute("src", toAbsoluteURI(src))
             }
 
             if (poster.isNotBlank()) {
-                media.attr("poster", toAbsoluteURI(poster))
+                media.setAttribute("poster", toAbsoluteURI(poster))
             }
 
             if (srcset.isNotBlank()) {
@@ -395,35 +401,35 @@ object ReadabilityUtils {
                         val comma = matchResult.groupValues[3]
                         toAbsoluteURI(url) + descriptor + comma
                     }
-                media.attr("srcset", newSrcset)
+                media.setAttribute("srcset", newSrcset)
             }
         }
     }
 
     fun cleanStyles(element: Element?) {
-        if (element == null || element.tagName().lowercase() == "svg") {
+        if (element == null || element.tagName == "SVG") {
             return
         }
 
-        PRESENTATIONAL_ATTRIBUTES.forEach { element.removeAttr(it) }
+        PRESENTATIONAL_ATTRIBUTES.forEach { element.removeAttribute(it) }
 
-        if (DEPRECATED_SIZE_ATTRIBUTE_ELEMS.contains(element.tagName())) {
-            element.removeAttr("width")
-            element.removeAttr("height")
+        if (DEPRECATED_SIZE_ATTRIBUTE_ELEMS.contains(element.tagName)) {
+            element.removeAttribute("width")
+            element.removeAttribute("height")
         }
 
-        element.children().forEach { cleanStyles(it) }
+        element.children.forEach { cleanStyles(it) }
     }
 
     fun simplifyNestedElements(articleContent: Element) {
         var node = articleContent as Element?
 
         while (node != null) {
-            val parent = node.parent()
+            val parent = node.parentNode
 
             if (parent != null &&
-                (node.tagName().equals("DIV", ignoreCase = true) || node.tagName().equals("SECTION", ignoreCase = true)) &&
-                !(node.id().isNotEmpty() && node.id().startsWith("readability"))
+                (node.tagName == "DIV" || node.tagName == "SECTION") &&
+                !(node.id.isNotEmpty() && node.id.startsWith("readability"))
             ) {
                 if (isElementWithoutContent(node)) {
                     node = removeAndGetNext(node)
@@ -433,15 +439,15 @@ object ReadabilityUtils {
                     hasSingleTagInsideElement(node, "DIV") ||
                     hasSingleTagInsideElement(node, "SECTION")
                 ) {
-                    val childElement = node.children().firstOrNull()
+                    val childElement = node.children.firstOrNull()
 
                     if (childElement != null) {
-                        node.attributes().forEach { attribute ->
-                            childElement.attr(attribute.key, attribute.value)
+                        node.attributes.forEach { attribute ->
+                            childElement.setAttribute(attribute.name, attribute.value)
                         }
 
                         // 부모 노드를 자식 노드로 교체
-                        node.replaceWith(childElement)
+                        node.parentNode?.replaceChild(childElement, node)
                         node = childElement
                         continue
                     }
@@ -458,7 +464,8 @@ object ReadabilityUtils {
     ) {
         val preservedClasses =
             node
-                .attr("class")
+                .getAttribute("class")
+                .orEmpty()
                 .takeIf { it.isNotBlank() }
                 ?.split(Regex("\\s+"))
                 ?.filter { it.isNotBlank() && it in p.classesToPreserve }
@@ -466,12 +473,12 @@ object ReadabilityUtils {
                 ?.takeIf { it.isNotEmpty() }
 
         if (preservedClasses != null) {
-            node.attr("class", preservedClasses)
+            node.setAttribute("class", preservedClasses)
         } else {
-            node.removeAttr("class")
+            node.removeAttribute("class")
         }
 
-        node.children().forEach { cleanClasses(it, p) }
+        node.children.forEach { cleanClasses(it, p) }
     }
 
     fun postProcessContent(
@@ -489,41 +496,9 @@ object ReadabilityUtils {
         node: Element,
         tag: String,
     ): Element {
-        val replacement = Element(tag)
-
-        val childrenToMove = node.children().toList()
-        for (child in childrenToMove) {
-            child.remove()
-            replacement.appendChild(child)
-        }
-
-        val textNodes = node.textNodes()
-        for (textNode in textNodes.toList()) {
-            textNode.remove()
-            replacement.appendChild(textNode)
-        }
-
-        for (attribute in node.attributes()) {
-            replacement.attr(attribute.key, attribute.value)
-        }
-
-        if (node.hasAttr("data-readability")) {
-            replacement.attr("data-readability", node.attr("data-readability"))
-        }
-
-        node.replaceWith(replacement)
-
-        return replacement
-    }
-
-    fun replaceNodeTags(
-        nodeList: Elements,
-        newTagName: String,
-    ) {
-        val nodesCopy = nodeList.toList()
-        for (node in nodesCopy) {
-            setNodeTag(node, newTagName)
-        }
+        node.localName = tag.lowercase()
+        node.tagName = tag.uppercase()
+        return node
     }
 
     fun replaceNodeTags(
@@ -538,44 +513,45 @@ object ReadabilityUtils {
     fun nextNode(node: Node?): Node? {
         var next = node
         while (next != null &&
-            next !is Element &&
-            (next is TextNode && Regexps.WHITESPACE.containsMatchIn(next.text()))
+            next.nodeType != NodeType.ELEMENT_NODE &&
+            Regexps.WHITESPACE.containsMatchIn(next.textContent)
         ) {
-            next = next.nextSibling()
+            next = next.nextSibling
         }
         return next
     }
 
-    fun replaceBrs(elem: Element) {
+    fun replaceBrs(
+        elem: Element,
+        p: ReadabilityProperties,
+    ) {
         val brElements = getAllNodesWithTag(elem, listOf("br"))
 
         brElements.forEach { br ->
-            var next: Node? = br.nextSibling()
+            var next: Node? = br.nextSibling
             var replaced = false
 
             while (true) {
                 next = nextNode(next)
-                if (next == null || next !is Element ||
-                    !next.tagName().equals("BR", ignoreCase = true)
-                ) {
+                if (next == null || next !is Element || next.tagName != "BR") {
                     break
                 }
 
                 replaced = true
-                val brSibling = next.nextSibling()
+                val brSibling = next.nextSibling
                 next.remove()
                 next = brSibling
             }
 
             if (replaced) {
-                val p = Element("p")
-                br.replaceWith(p)
+                val pElement = p.document.createElement("p")
+                br.parentNode?.replaceChild(pElement, br)
 
-                next = p.nextSibling()
+                next = pElement.nextSibling
                 while (next != null) {
-                    if (next is Element && next.tagName().equals("BR", ignoreCase = true)) {
-                        val nextElem = nextNode(next.nextSibling())
-                        if (nextElem is Element && nextElem.tagName().equals("BR", ignoreCase = true)) {
+                    if (next is Element && next.tagName == "BR") {
+                        val nextElem = nextNode(next.nextSibling) as? Element
+                        if (nextElem != null && nextElem.tagName == "BR") {
                             break
                         }
                     }
@@ -584,22 +560,20 @@ object ReadabilityUtils {
                         break
                     }
 
-                    val sibling = next.nextSibling()
-                    p.appendChild(next)
+                    val sibling = next.nextSibling
+                    pElement.appendChild(next)
                     next = sibling
                 }
 
-                while (p.childNodeSize() > 0) {
-                    val lastChild = p.childNode(p.childNodeSize() - 1)
-                    if (isWhiteSpace(lastChild)) {
-                        lastChild.remove()
-                    } else {
-                        break
-                    }
+                var pElementLastChild = pElement.lastChild
+                while (pElementLastChild != null && isWhiteSpace(pElementLastChild)) {
+                    pElementLastChild.remove()
+                    pElementLastChild = pElement.lastChild
                 }
 
-                p.parent()?.let { parent ->
-                    if (parent.tagName().equals("P", ignoreCase = true)) {
+                pElement.parentNode?.let { parent ->
+                    val element = parent as? Element
+                    if (element != null && element.tagName == "P") {
                         setNodeTag(parent, "DIV")
                     }
                 }
@@ -611,15 +585,15 @@ object ReadabilityUtils {
         var current = node
 
         while (current != null) {
-            if (current.tagName().equals("IMG", ignoreCase = true)) {
+            if (current.tagName == "IMG") {
                 return true
             }
 
-            if (current.children().size != 1 || current.text().trim().isNotEmpty()) {
+            if (current.children.size != 1 || current.textContent.trim().isNotEmpty()) {
                 return false
             }
 
-            current = current.children().firstOrNull()
+            current = current.children.firstOrNull()
         }
 
         return false
@@ -633,7 +607,7 @@ object ReadabilityUtils {
         var next = getNextNode(element)
 
         while (next != null && next != endOfSearchMarkerNode) {
-            val classAndId = "${next.className()} ${next.id()}".trim()
+            val classAndId = "${next.className} ${next.id}".trim()
 
             next =
                 if (filter(next, classAndId)) {
@@ -653,11 +627,11 @@ object ReadabilityUtils {
         var origTitle = ""
 
         try {
-            curTitle = document.title().trim()
+            curTitle = document.title.trim()
             origTitle = curTitle
 
             if (curTitle.isEmpty()) {
-                document.getElementsByTag("title").firstOrNull()?.let { titleElement ->
+                document.getElementsByTagName("title").firstOrNull()?.let { titleElement ->
                     curTitle = getInnerText(titleElement)
                     origTitle = curTitle
                 }
@@ -692,7 +666,7 @@ object ReadabilityUtils {
             val trimmedTitle = curTitle.trim()
             val match =
                 headings.someNode { heading ->
-                    heading.text().trim() == trimmedTitle
+                    heading.textContent.trim() == trimmedTitle
                 }
 
             if (!match) {
@@ -710,7 +684,7 @@ object ReadabilityUtils {
                 }
             }
         } else if (curTitle.length !in 15..150) {
-            val h1Elements = document.getElementsByTag("h1")
+            val h1Elements = document.getElementsByTagName("h1")
 
             h1Elements.singleOrNull()?.let {
                 curTitle = getInnerText(it)
@@ -732,10 +706,13 @@ object ReadabilityUtils {
         return curTitle
     }
 
-    fun prepDocument(document: Document) {
+    fun prepDocument(
+        document: Document,
+        p: ReadabilityProperties,
+    ) {
         removeNodes(getAllNodesWithTag(document, listOf("style")))
 
-        replaceBrs(document.body())
+        document.body?.let { replaceBrs(it, p) }
 
         replaceNodeTags(getAllNodesWithTag(document, listOf("font")), "SPAN")
     }
@@ -743,17 +720,17 @@ object ReadabilityUtils {
     fun getRowAndColumnCount(table: Element): Pair<Int, Int> {
         var rows = 0
         var columns = 0
-        val trs = table.getElementsByTag("tr")
+        val trs = table.getElementsByTagName("tr")
 
         for (tr in trs) {
-            val rowspan = tr.attr("rowspan").toIntOrNull() ?: 1
+            val rowspan = tr.getAttribute("rowspan")?.toIntOrNull() ?: 1
             rows += rowspan
 
             var columnsInThisRow = 0
-            val cells = tr.getElementsByTag("td")
+            val cells = tr.getElementsByTagName("td")
 
             for (cell in cells) {
-                val colspan = cell.attr("colspan").toIntOrNull() ?: 1
+                val colspan = cell.getAttribute("colspan")?.toIntOrNull() ?: 1
                 columnsInThisRow += colspan
             }
             columns = maxOf(columns, columnsInThisRow)
@@ -772,13 +749,13 @@ object ReadabilityUtils {
         var depth = 0
         var currentNode: Element? = node
 
-        while (currentNode?.parent() != null) {
+        while (currentNode?.parentNode != null) {
             if (maxDepth in 1..<depth) {
                 return false
             }
 
-            val parent = currentNode.parent()
-            if (parent?.tagName()?.uppercase() == normalizedTagName && (filterFn == null || filterFn(parent))) {
+            val parent = currentNode.parentNode as? Element
+            if (parent?.tagName == normalizedTagName && (filterFn == null || filterFn(parent))) {
                 return true
             }
 
@@ -798,11 +775,11 @@ object ReadabilityUtils {
 
         removeNodes(getAllNodesWithTag(e, listOf(tag))) { element ->
             if (isEmbed) {
-                if (element.attributes().any { p.allowedVideoRegex.containsMatchIn(it.value) }) {
+                if (element.attributes.any { p.allowedVideoRegex.containsMatchIn(it.value) }) {
                     return@removeNodes false
                 }
 
-                if (element.tagName() == "object" && p.allowedVideoRegex.containsMatchIn(element.html())) {
+                if (element.tagName == "OBJECT" && p.allowedVideoRegex.containsMatchIn(element.innerHTML)) {
                     return@removeNodes false
                 }
             }
@@ -811,15 +788,15 @@ object ReadabilityUtils {
     }
 
     fun getNodeAncestors(
-        node: Element,
+        node: Node,
         maxDepth: Int = 0,
-    ): List<Element> {
+    ): List<Node> {
         var i = 0
-        val ancestors = mutableListOf<Element>()
-        var currentNode: Element? = node
+        val ancestors = mutableListOf<Node>()
+        var currentNode: Node? = node
 
-        while (currentNode?.parent() != null) {
-            val parent = currentNode.parent()
+        while (currentNode?.parentNode != null) {
+            val parent = currentNode.parentNode
             requireNotNull(parent) { "Parent node should not be null" }
             ancestors.add(parent)
 
@@ -837,30 +814,7 @@ object ReadabilityUtils {
         if (str.isNullOrBlank()) {
             return str
         }
-
-        return str
-            .replace(Regex("&(quot|amp|apos|lt|gt);")) { matchResult ->
-                val tag = matchResult.groupValues[1]
-                HTML_ESCAPE_MAP[tag] ?: matchResult.value
-            }.replace(Regex("&#(?:x([0-9a-f]+)|([0-9]+));", RegexOption.IGNORE_CASE)) { matchResult ->
-                val hex = matchResult.groupValues[1]
-                val numStr = matchResult.groupValues[2]
-
-                val num =
-                    if (hex.isNotEmpty()) {
-                        hex.toInt(16)
-                    } else {
-                        numStr.toInt(10)
-                    }
-
-                val validNum =
-                    when {
-                        num == 0 || num > 0x10FFFF || (num in 0xD800..0xDFFF) -> 0xFFFD
-                        else -> num
-                    }
-
-                String(Character.toChars(validNum))
-            }
+        return decodeHTML(str)
     }
 
     fun initializeNode(
@@ -869,7 +823,7 @@ object ReadabilityUtils {
     ) {
         node.setContentScore()
 
-        val tagName = node.tagName().uppercase()
+        val tagName = node.tagName
 
         val contentScore =
             when (tagName) {
@@ -884,147 +838,152 @@ object ReadabilityUtils {
     }
 
     fun markDataTables(root: Element) {
-        val tables = root.getElementsByTag("table")
+        val tables = root.getElementsByTagName("table")
 
         for (table in tables) {
-            val role = table.attr("role")
+            val role = table.getAttribute("role")
             if (role == "presentation") {
-                table.attr("_readabilityDataTable", "false")
+                table.setAttribute("_readabilityDataTable", "false")
                 continue
             }
 
-            val datatable = table.attr("datatable")
+            val datatable = table.getAttribute("datatable")
             if (datatable == "0") {
-                table.attr("_readabilityDataTable", "false")
+                table.setAttribute("_readabilityDataTable", "false")
                 continue
             }
 
-            val summary = table.attr("summary")
+            val summary = table.getAttribute("summary").orEmpty()
             if (summary.isNotBlank()) {
-                table.attr("_readabilityDataTable", "true")
+                table.setAttribute("_readabilityDataTable", "true")
                 continue
             }
 
-            val caption = table.getElementsByTag("caption").firstOrNull()
-            if (caption != null && caption.childNodes().isNotEmpty()) {
-                table.attr("_readabilityDataTable", "true")
+            val caption = table.getElementsByTagName("caption").firstOrNull()
+            if (caption != null && caption.childNodes.isNotEmpty()) {
+                table.setAttribute("_readabilityDataTable", "true")
                 continue
             }
 
             val dataTableDescendants = setOf("col", "colgroup", "tfoot", "thead", "th")
             val descendantExists = { tag: String ->
-                table.getElementsByTag(tag).isNotEmpty()
+                table.getElementsByTagName(tag).isNotEmpty()
             }
 
             if (dataTableDescendants.any(descendantExists)) {
-                table.attr("_readabilityDataTable", "true")
+                table.setAttribute("_readabilityDataTable", "true")
                 continue
             }
 
-            if (table.getElementsByTag("table").isNotEmpty()) {
-                table.attr("_readabilityDataTable", "false")
+            if (table.getElementsByTagName("table").isNotEmpty()) {
+                table.setAttribute("_readabilityDataTable", "false")
                 continue
             }
 
             val (rows, columns) = getRowAndColumnCount(table)
 
             if (columns == 1 || rows == 1) {
-                table.attr("_readabilityDataTable", "false")
+                table.setAttribute("_readabilityDataTable", "false")
                 continue
             }
 
             if (rows >= 10 || columns > 4) {
-                table.attr("_readabilityDataTable", "true")
+                table.setAttribute("_readabilityDataTable", "true")
                 continue
             }
 
-            table.attr("_readabilityDataTable", (rows * columns > 10).toString())
+            table.setAttribute("_readabilityDataTable", (rows * columns > 10).toString())
         }
     }
 
-    fun unwrapNoscriptImages(doc: Element) {
+    fun unwrapNoscriptImages(doc: Document) {
         val imageSourceAttributes = setOf("src", "srcset", "data-src", "data-srcset")
-        doc.getElementsByTag("img").toList().forEach { img ->
-            for (attr in img.attributes()) {
-                if (attr.key in imageSourceAttributes) return@forEach
+        doc.getElementsByTagName("img").toList().forEach { img ->
+            for (attr in img.attributes) {
+                if (attr.name in imageSourceAttributes) return@forEach
                 if (IMAGE_EXTENSION_REGEX.containsMatchIn(attr.value)) return@forEach
             }
             img.remove()
         }
 
-        doc.getElementsByTag("noscript").toList().forEach { noscript ->
+        doc.getElementsByTagName("noscript").toList().forEach { noscript ->
             if (!isSingleImage(noscript)) {
                 return@forEach
             }
 
-            val tmp = Jsoup.parseBodyFragment(noscript.html())
-            val prevElement = noscript.previousElementSibling()
+            val tmp = doc.createElement("div")
+            tmp.innerHTML = noscript.innerHTML
+            val prevElement = noscript.previousElementSibling
 
             if (prevElement != null && isSingleImage(prevElement)) {
                 var prevImg = prevElement
-                if (prevImg.tagName() != "img") {
-                    prevImg = prevElement.getElementsByTag("img").firstOrNull()
+                if (prevImg.tagName != "IMG") {
+                    prevImg = prevElement.getElementsByTagName("img").firstOrNull()
                 }
                 requireNotNull(prevImg) { "Previous element should not be null" }
 
-                val newImg = tmp.getElementsByTag("img").firstOrNull()
+                val newImg = tmp.getElementsByTagName("img").firstOrNull()
                 requireNotNull(newImg) { "New image should not be null" }
 
-                for (attr in prevImg.attributes()) {
+                for (attr in prevImg.attributes) {
                     if (attr.value.isEmpty()) {
                         continue
                     }
 
-                    if (attr.key == "src" || attr.key == "srcset" || IMAGE_EXTENSION_REGEX.containsMatchIn(attr.value)) {
-                        if (newImg.attr(attr.key) == attr.value) {
+                    if (attr.name == "src" || attr.name == "srcset" || IMAGE_EXTENSION_REGEX.containsMatchIn(attr.value)) {
+                        if (newImg.getAttribute(attr.name) == attr.value) {
                             continue
                         }
 
-                        var attrName = attr.key
-                        if (newImg.hasAttr(attrName)) {
+                        var attrName = attr.name
+                        if (newImg.hasAttribute(attrName)) {
                             attrName = "data-old-$attrName"
                         }
-                        newImg.attr(attrName, attr.value)
+                        newImg.setAttribute(attrName, attr.value)
                     }
                 }
 
-                prevElement.replaceWith(newImg)
-                noscript.remove()
+                tmp.firstElementChild?.let {
+                    noscript.parentNode?.replaceChild(it, prevElement)
+                }
             }
         }
     }
 
-    fun fixLazyImages(root: Element) {
+    fun fixLazyImages(
+        root: Element,
+        p: ReadabilityProperties,
+    ) {
         getAllNodesWithTag(root, listOf("img", "picture", "figure")).forEach { elem ->
-            val srcAttr = elem.attr("src")
-            if (Regexps.B64_DATA_URL.containsMatchIn(srcAttr)) {
-                val parts = Regexps.B64_DATA_URL.find(srcAttr)
+            if (elem.src.isNotEmpty() && Regexps.B64_DATA_URL.containsMatchIn(elem.src)) {
+                val parts = Regexps.B64_DATA_URL.find(elem.src)
 
                 if (parts?.groupValues[1] != "image/svg+xml") {
                     val srcCouldBeRemoved =
-                        elem.attributes().any {
-                            it.key != "src" && IMAGE_EXTENSION_REGEX.containsMatchIn(it.value)
+                        elem.attributes.any {
+                            it.name != "src" && IMAGE_EXTENSION_REGEX.containsMatchIn(it.value)
                         }
 
                     if (srcCouldBeRemoved) {
                         val dataUrlHeaderLength = parts?.groupValues[0]?.length ?: 0
-                        val b64length = srcAttr.length - dataUrlHeaderLength
+                        val b64length = elem.src.length - dataUrlHeaderLength
                         if (b64length < 133) {
-                            elem.removeAttr("src")
+                            elem.removeAttribute("src")
                         }
                     }
                 }
             }
 
-            val srcsetAttr = elem.attr("srcset")
-            if ((elem.hasAttr("src") || (srcsetAttr.isNotBlank() && srcsetAttr != "null")) &&
-                !elem.className().contains("lazy", ignoreCase = true)
+            val srcsetAttr = elem.getAttribute("srcset")
+            if ((elem.hasAttribute("src") || (srcsetAttr != null && srcsetAttr != "null")) &&
+                !elem.className.contains("lazy", ignoreCase = true)
             ) {
                 return@forEach
             }
 
-            for (attr in elem.attributes()) {
-                if (attr.key in setOf("src", "srcset", "alt")) {
+            for (i in 0 until elem.attributes.size) {
+                val attr = elem.attributes[i]
+                if (attr.name in setOf("src", "srcset", "alt")) {
                     continue
                 }
 
@@ -1036,12 +995,13 @@ object ReadabilityUtils {
                     }
 
                 if (copyTo != null) {
-                    when (elem.tagName().lowercase()) {
-                        "img", "picture" -> elem.attr(copyTo, attr.value)
-                        "figure" -> {
+                    when (elem.tagName) {
+                        "IMG", "PICTURE" -> elem.setAttribute(copyTo, attr.value)
+                        "FIGURE" -> {
                             if (getAllNodesWithTag(elem, listOf("img", "picture")).isEmpty()) {
-                                val newImg = Element("img").attr(copyTo, attr.value)
-                                elem.appendChild(newImg)
+                                val img = p.document.createElement("img")
+                                img.setAttribute(copyTo, attr.value)
+                                elem.appendChild(img)
                             }
                         }
                     }
@@ -1056,20 +1016,20 @@ object ReadabilityUtils {
     ): MutableMap<String, String?> {
         val metadata = mutableMapOf<String, String?>()
         val values = mutableMapOf<String, String>()
-        val metaElements = p.document.getElementsByTag("meta")
+        val metaElements = p.document.getElementsByTagName("meta")
 
         metaElements.forEach { element ->
-            val content = element.attr("content")
-            if (content.isBlank()) {
+            val content = element.getAttribute("content")
+            if (content.isNullOrBlank()) {
                 return@forEach
             }
 
-            val elementProperty = element.attr("property")
-            val elementName = element.attr("name")
+            val elementProperty = element.getAttribute("property")
+            val elementName = element.getAttribute("name")
             var matches: MatchResult? = null
             var name: String? = null
 
-            if (elementProperty.isNotBlank()) {
+            if (elementProperty != null) {
                 matches = Regexps.PROPERTY_PATTERN.find(elementProperty)
                 if (matches != null) {
                     name =
@@ -1081,7 +1041,7 @@ object ReadabilityUtils {
                 }
             }
 
-            if (matches == null && elementName.isNotBlank() && Regexps.NAME_PATTERN.containsMatchIn(elementName)) {
+            if (matches == null && elementName != null && Regexps.NAME_PATTERN.containsMatchIn(elementName)) {
                 name = elementName.lowercase().replace("\\s".toRegex(), "").replace(".", ":")
                 values[name] = content.trim()
             }
@@ -1145,14 +1105,14 @@ object ReadabilityUtils {
         }
 
         val isDataTable: (Element) -> Boolean = { element ->
-            element.hasAttr("_readabilityDataTable")
+            element.hasAttribute("_readabilityDataTable")
         }
 
         removeNodes(getAllNodesWithTag(e, listOf(tag))) { element ->
             if (tag == "table" && isDataTable(element)) return@removeNodes false
             if (hasAncestorTag(element, "table", -1) { isDataTable(it) }) return@removeNodes false
             if (hasAncestorTag(element, "code")) return@removeNodes false
-            if (element.getElementsByTag("table").any { isDataTable(it) }) return@removeNodes false
+            if (element.getElementsByTagName("table").any { isDataTable(it) }) return@removeNodes false
 
             val weight = getClassWeight(element, p)
             if (weight < 0) {
@@ -1171,10 +1131,10 @@ object ReadabilityUtils {
                     }
                 }
 
-                val pCount = element.getElementsByTag("p").size
-                val imgCount = element.getElementsByTag("img").size
-                val liCount = element.getElementsByTag("li").size - 100
-                val inputCount = element.getElementsByTag("input").size
+                val pCount = element.getElementsByTagName("p").size
+                val imgCount = element.getElementsByTagName("img").size
+                val liCount = element.getElementsByTagName("li").size - 100
+                val inputCount = element.getElementsByTagName("input").size
                 val headingDensity = getTextDensity(element, listOf("h1", "h2", "h3", "h4", "h5", "h6"))
                 val innerText = getInnerText(element)
 
@@ -1182,8 +1142,8 @@ object ReadabilityUtils {
                 val embeds = getAllNodesWithTag(element, listOf("object", "embed", "iframe"))
                 for (embed in embeds) {
                     val hasAllowedVideo =
-                        embed.attributes().any { p.allowedVideoRegex.containsMatchIn(it.value) } ||
-                            (embed.tagName() == "object" && p.allowedVideoRegex.containsMatchIn(embed.html()))
+                        embed.attributes.any { p.allowedVideoRegex.containsMatchIn(it.value) } ||
+                            (embed.tagName == "OBJECT" && p.allowedVideoRegex.containsMatchIn(embed.innerHTML))
                     if (hasAllowedVideo) {
                         return@removeNodes false
                     }
@@ -1237,8 +1197,8 @@ object ReadabilityUtils {
 
                 if (shouldRemove && isList) {
                     val isSimpleImageList =
-                        element.children().all { it.childrenSize() <= 1 } &&
-                            element.getElementsByTag("li").size == imgCount
+                        element.children.all { it.children.size <= 1 } &&
+                            element.getElementsByTagName("li").size == imgCount
                     if (isSimpleImageList) {
                         return@removeNodes false
                     }
@@ -1267,12 +1227,10 @@ object ReadabilityUtils {
 
         for (jsonLdElement in scripts) {
             if (metadata != null) break
-            if (jsonLdElement.attr("type") != "application/ld+json") {
-                continue
-            }
+            if (jsonLdElement.getAttribute("type") != "application/ld+json") continue
 
             try {
-                val content = jsonLdElement.data().replace(Regexps.CDATA_REGEX, "")
+                val content = jsonLdElement.textContent.replace(Regexps.CDATA_REGEX, "")
 
                 var parsed = json.parseToJsonElement(content)
 
@@ -1280,12 +1238,9 @@ object ReadabilityUtils {
                     parsed = parsed.firstOrNull { element ->
                         (element as? JsonObject)
                             ?.get("@type")
-                            ?.let { type ->
-                                (type as? JsonPrimitive)
-                                    ?.contentOrNull
-                                    ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) }
-                            }
-                            ?: false
+                            ?.jsonPrimitive
+                            ?.contentOrNull
+                            ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) } == true
                     } ?: continue
                 }
 
@@ -1295,8 +1250,10 @@ object ReadabilityUtils {
                     when (val context = parsed["@context"]) {
                         is JsonPrimitive -> context.contentOrNull?.let { Regexps.SCHEMA_DOT_ORG_REGEX.containsMatchIn(it) } == true
                         is JsonObject -> {
-                            val vocab = context["@vocab"]
-                            vocab is JsonPrimitive && vocab.contentOrNull?.let { Regexps.SCHEMA_DOT_ORG_REGEX.containsMatchIn(it) } == true
+                            context["@vocab"]
+                                ?.jsonPrimitive
+                                ?.contentOrNull
+                                ?.let { Regexps.SCHEMA_DOT_ORG_REGEX.containsMatchIn(it) } == true
                         }
                         else -> false
                     }
@@ -1308,9 +1265,8 @@ object ReadabilityUtils {
                     finalParsed = (parsed["@graph"] as JsonArray)
                         .firstOrNull { element ->
                             val typeContentOrEmpty =
-                                (element as? JsonObject)
-                                    ?.get("@type")
-                                    ?.let { it as? JsonPrimitive }
+                                element.jsonObject["@type"]
+                                    ?.jsonPrimitive
                                     ?.contentOrNull
                                     ?: ""
                             Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(typeContentOrEmpty)
@@ -1318,10 +1274,10 @@ object ReadabilityUtils {
                 }
 
                 val typeMatches =
-                    (finalParsed["@type"] as? JsonPrimitive)
+                    finalParsed["@type"]
+                        ?.jsonPrimitive
                         ?.contentOrNull
-                        ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) }
-                        ?: false
+                        ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) } == true
 
                 if (!typeMatches) continue
 
@@ -1335,11 +1291,7 @@ object ReadabilityUtils {
                     val nameMatches = textSimilarity(name, title) > SIMILARITY_THRESHOLD
                     val headlineMatches = textSimilarity(headline, title) > SIMILARITY_THRESHOLD
 
-                    metadata["title"] =
-                        when {
-                            headlineMatches && !nameMatches -> headline
-                            else -> name
-                        }
+                    metadata["title"] = if (headlineMatches && !nameMatches) headline else name
                 } else if (name != null) {
                     metadata["title"] = name.trim()
                 } else if (headline != null) {
@@ -1352,6 +1304,7 @@ object ReadabilityUtils {
                             metadata["byline"] = it.trim()
                         }
                     }
+
                     is JsonArray -> {
                         val authors =
                             author
@@ -1371,20 +1324,22 @@ object ReadabilityUtils {
                     else -> {}
                 }
 
-                finalParsed["description"]?.jsonPrimitive?.contentOrNull?.let {
-                    metadata["excerpt"] = it.trim()
-                }
+                finalParsed["description"]
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?.let { metadata["excerpt"] = it.trim() }
 
-                val publisher = finalParsed["publisher"]
-                if (publisher is JsonObject) {
-                    publisher["name"]?.jsonPrimitive?.contentOrNull?.let {
-                        metadata["siteName"] = it.trim()
-                    }
-                }
+                (finalParsed["publisher"] as? JsonObject)
+                    ?.jsonObject
+                    ?.get("name")
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?.let { metadata["siteName"] = it.trim() }
 
-                finalParsed["datePublished"]?.jsonPrimitive?.contentOrNull?.let {
-                    metadata["datePublished"] = it.trim()
-                }
+                finalParsed["datePublished"]
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?.let { metadata["datePublished"] = it.trim() }
             } catch (e: Exception) {
                 LOGGER.warn("Failed to parse JSON-LD: ${e.message}")
             }
@@ -1399,7 +1354,7 @@ object ReadabilityUtils {
     ) {
         cleanStyles(articleContent)
         markDataTables(articleContent)
-        fixLazyImages(articleContent)
+        fixLazyImages(articleContent, p)
 
         cleanConditionally(articleContent, "form", p)
         cleanConditionally(articleContent, "fieldset", p)
@@ -1411,10 +1366,10 @@ object ReadabilityUtils {
 
         val shareElementThreshold = DEFAULT_CHAR_THRESHOLD
 
-        articleContent.children().forEach { topCandidate ->
+        articleContent.children.forEach { topCandidate ->
             cleanMatchedNodes(topCandidate) { node, matchString ->
                 Regexps.SHARE_ELEMENTS.containsMatchIn(matchString) &&
-                    node.text().length < shareElementThreshold
+                    node.textContent.length < shareElementThreshold
             }
         }
 
@@ -1437,8 +1392,8 @@ object ReadabilityUtils {
         }
 
         getAllNodesWithTag(articleContent, listOf("br")).forEach { br ->
-            val next = nextNode(br.nextElementSibling())
-            if (next != null && next is Element && next.tagName() == "p") {
+            val next = nextNode(br.nextElementSibling)
+            if (next != null && next is Element && next.tagName == "P") {
                 br.remove()
             }
         }
@@ -1446,23 +1401,23 @@ object ReadabilityUtils {
         getAllNodesWithTag(articleContent, listOf("table")).forEach { table ->
             val tbody =
                 if (hasSingleTagInsideElement(table, "tbody")) {
-                    table.firstElementChild()
+                    table.firstElementChild
                 } else {
                     table
                 } ?: return@forEach
 
             if (hasSingleTagInsideElement(tbody, "tr")) {
-                val row = tbody.firstElementChild() ?: return@forEach
+                val row = tbody.firstElementChild ?: return@forEach
                 if (hasSingleTagInsideElement(row, "td")) {
-                    val cell = row.firstElementChild() ?: return@forEach
+                    val cell = row.firstElementChild ?: return@forEach
                     val newTag =
-                        if (cell.childNodes().everyNode(::isPhrasingContent)) {
+                        if (cell.childNodes.everyNode(::isPhrasingContent)) {
                             "p"
                         } else {
                             "div"
                         }
                     val replacementCell = setNodeTag(cell, newTag)
-                    table.replaceWith(replacementCell)
+                    table.parentNode?.replaceChild(replacementCell, table)
                 }
             }
         }
@@ -1470,12 +1425,17 @@ object ReadabilityUtils {
 
     private const val DATA_READABILITY_CONTENT_SCORE = "data-readability-content-score"
 
-    private fun Element.hasContentScore(): Boolean = this.hasAttr(DATA_READABILITY_CONTENT_SCORE)
+    private fun Element.hasContentScore(): Boolean = this.readability != null
 
-    private fun Element.getContentScore(): Double = this.attr(DATA_READABILITY_CONTENT_SCORE).toDoubleOrNull() ?: 0.0
+    private fun Element.getContentScore(): Double = this.readability?.contentScore ?: 0.0
 
     private fun Element.setContentScore(score: Double = 0.0) {
-        this.attr(DATA_READABILITY_CONTENT_SCORE, score.toString())
+        val readabilityData = this.readability
+        if (readabilityData == null) {
+            this.readability = ReadabilityData(score)
+            return
+        }
+        readabilityData.contentScore = score
     }
 
     fun grabArticle(
@@ -1485,24 +1445,29 @@ object ReadabilityUtils {
         LOGGER.info("**** grabArticle ****")
         val document = p.document
         val isPaging = page != null
-        val currentPage = page ?: document.body()
+        val currentPage = page ?: document.body
 
-        val pageCacheHtml = currentPage.html()
+        if (currentPage == null) {
+            LOGGER.info("No body found in document. Abort.")
+            return null
+        }
+
+        val pageCacheHtml = currentPage.innerHTML
 
         while (true) {
             LOGGER.info("Starting grabArticle loop")
             val stripUnlikelyCandidates = flagIsActive(p, FLAG_STRIP_UNLIKELYS)
 
             val elementsToScore = mutableListOf<Element>()
-            var node: Element? = document.root()
+            var node: Element? = document.documentElement
             var shouldRemoveTitleHeader = true
 
             while (node != null) {
-                if (node.tagName() == "html") {
-                    p.articleLang = node.attr("lang")
+                if (node.tagName == "HTML") {
+                    p.articleLang = node.getAttribute("lang")
                 }
 
-                val matchString = "${node.className()} ${node.id()}"
+                val matchString = "${node.className} ${node.id}"
 
                 if (!isProbablyVisible(node)) {
                     LOGGER.info("Removing hidden node - {}", matchString)
@@ -1510,32 +1475,37 @@ object ReadabilityUtils {
                     continue
                 }
 
-                if (node.attr("aria-modal") == "true" && node.attr("role") == "dialog") {
+                if (node.getAttribute("aria-modal") == "true" && node.getAttribute("role") == "dialog") {
                     node = removeAndGetNext(node)
                     continue
                 }
 
-                if (p.articleByline.isNullOrEmpty() && p.metadata["byline"].isNullOrEmpty() && isValidByLine(node, matchString)) {
+                if (p.articleByline.isNullOrEmpty() && p.metadata["byline"].isNullOrEmpty() &&
+                    isValidByLine(
+                        node,
+                        matchString,
+                    )
+                ) {
                     val endOfSearchMarkerNode = getNextNode(node, true)
                     var next = getNextNode(node)
                     var itemPropNameNode: Element? = null
 
                     while (next != null && next != endOfSearchMarkerNode) {
-                        val itemprop = next.attr("itemprop")
-                        if (itemprop.split(Regex("\\s+")).contains("name")) {
+                        val itemprop = next.getAttribute("itemprop")
+                        if (itemprop != null && itemprop.split(Regex("\\s+")).contains("name")) {
                             itemPropNameNode = next
                             break
                         }
                         next = getNextNode(next)
                     }
 
-                    p.articleByline = (itemPropNameNode ?: node).text().trim()
+                    p.articleByline = (itemPropNameNode ?: node).textContent.trim()
                     node = removeAndGetNext(node)
                     continue
                 }
 
                 if (shouldRemoveTitleHeader && headerDuplicatesTitle(node, p)) {
-                    LOGGER.info("Removing header: {}, {}", node.text().trim(), p.articleTitle?.trim())
+                    LOGGER.info("Removing header: {}, {}", node.textContent.trim(), p.articleTitle?.trim())
                     shouldRemoveTitleHeader = false
                     node = removeAndGetNext(node)
                     continue
@@ -1546,82 +1516,72 @@ object ReadabilityUtils {
                         !Regexps.OK_MAYBE_ITS_A_CANDIDATE.containsMatchIn(matchString) &&
                         !hasAncestorTag(node, "table") &&
                         !hasAncestorTag(node, "code") &&
-                        node.tagName() != "body" &&
-                        node.tagName() != "a"
+                        node.tagName != "BODY" &&
+                        node.tagName != "A"
                     ) {
                         LOGGER.info("Removing unlikely candidate - {}", matchString)
                         node = removeAndGetNext(node)
                         continue
                     }
 
-                    if (node.attr("role") in UNLIKELY_ROLES) {
-                        LOGGER.info("Removing content with role {} - {}", node.attr("role"), matchString)
+                    if (node.getAttribute("role") in UNLIKELY_ROLES) {
+                        LOGGER.info("Removing content with role {} - {}", node.getAttribute("role"), matchString)
                         node = removeAndGetNext(node)
                         continue
                     }
                 }
 
-                if (node.tagName() in setOf("div", "section", "header", "h1", "h2", "h3", "h4", "h5", "h6") &&
+                if (node.tagName in setOf("DIV", "SECTION", "HEADER", "H1", "H2", "H3", "H4", "H5", "H6") &&
                     isElementWithoutContent(node)
                 ) {
                     node = removeAndGetNext(node)
                     continue
                 }
 
-                if (node.tagName() in DEFAULT_TAGS_TO_SCORE) {
+                if (node.tagName in DEFAULT_TAGS_TO_SCORE) {
                     elementsToScore.add(node)
                 }
 
-                if (node.tagName() == "div") {
-                    var childNode: Node? = node.childNodes().firstOrNull()
+                if (node.tagName == "DIV") {
+                    var childNode: Node? = node.firstChild
 
                     while (childNode != null) {
-                        val nextSibling = childNode.nextSibling()
+                        var nextSibling = childNode.nextSibling
 
                         if (isPhrasingContent(childNode)) {
-                            val fragment = mutableListOf<Node>()
-                            var current: Node = childNode
+                            val fragment = document.createDocumentFragment()
 
                             do {
-                                fragment.add(current)
-                                val next = current.nextSibling() ?: break
-                                if (!isPhrasingContent(next)) break
-                                current = next
-                            } while (true)
+                                nextSibling = childNode!!.nextSibling
+                                fragment.appendChild(childNode)
+                                childNode = nextSibling
+                            } while (nextSibling != null && isPhrasingContent(nextSibling))
 
-                            while (fragment.isNotEmpty() && isWhiteSpace(fragment.first())) {
-                                fragment.removeFirst().remove()
+                            var fragmentFirstChild = fragment.firstChild
+                            while (fragmentFirstChild != null && isWhiteSpace(fragmentFirstChild)) {
+                                fragmentFirstChild.remove()
+                                fragmentFirstChild = fragment.firstChild
                             }
-                            while (fragment.isNotEmpty() && isWhiteSpace(fragment.last())) {
-                                fragment.removeLast().remove()
+                            var fragmentLastChild = fragment.lastChild
+                            while (fragmentLastChild != null && isWhiteSpace(fragmentLastChild)) {
+                                fragmentLastChild.remove()
+                                fragmentLastChild = fragment.lastChild
                             }
 
-                            if (fragment.isNotEmpty()) {
+                            if (fragment.firstChild != null) {
                                 val p = document.createElement("p")
-                                fragment.forEach { fragmentNode ->
-                                    fragmentNode.remove()
-                                    p.appendChild(fragmentNode)
-                                }
-
-                                val insertBefore = current.nextSibling()
-                                if (insertBefore != null) {
-                                    insertBefore.before(p)
-                                } else {
-                                    node.appendChild(p)
-                                }
+                                p.appendChild(fragment)
+                                node.insertBefore(p, nextSibling)
                             }
-                            childNode = current.nextSibling()
-                        } else {
-                            childNode = nextSibling
                         }
+                        childNode = nextSibling
                     }
 
                     if (hasSingleTagInsideElement(node, "p") &&
                         getLinkDensity(node) < 0.25.toBigDecimal()
                     ) {
-                        val newNode = node.child(0)
-                        newNode.remove()
-                        node.replaceWith(newNode)
+                        val newNode = node.children[0]
+                        node.parentNode?.replaceChild(newNode, node)
                         node = newNode
                         elementsToScore.add(node)
                     } else if (!hasChildBlockElement(node)) {
@@ -1635,8 +1595,8 @@ object ReadabilityUtils {
             val candidates = mutableListOf<Element>()
 
             elementsToScore.forEach { elementToScore ->
-                val parent = elementToScore.parent()
-                if (parent == null || parent.tagName().isBlank()) {
+                val parent = elementToScore.parentNode as? Element
+                if (parent == null || parent.tagName.isBlank()) {
                     return@forEach
                 }
 
@@ -1656,7 +1616,9 @@ object ReadabilityUtils {
                 contentScore += minOf(innerText.length / 100, 3)
 
                 ancestors.forEachIndexed { level, ancestor ->
-                    if (ancestor.tagName().isEmpty() || ancestor.parent() == null || ancestor.parent()?.tagName().isNullOrBlank()) {
+                    if (ancestor !is Element || ancestor.tagName.isEmpty() || ancestor.parentNode == null ||
+                        (ancestor.parentNode as? Element)?.tagName.isNullOrBlank()
+                    ) {
                         return@forEachIndexed
                     }
 
@@ -1707,21 +1669,21 @@ object ReadabilityUtils {
             var neededToCreateTopCandidate = false
             var parentOfTopCandidate: Element?
 
-            if (topCandidate == null || topCandidate.tagName() == "body") {
+            if (topCandidate == null || topCandidate.tagName == "BODY") {
                 topCandidate = document.createElement("div")
                 neededToCreateTopCandidate = true
 
-                while (currentPage.childNodeSize() > 0) {
-                    val child = currentPage.childNode(0)
-                    LOGGER.info("Moving child out: {}", child)
-                    child.remove()
-                    topCandidate.appendChild(child)
+                var currentPageFirstChild = currentPage.firstChild
+                while (currentPageFirstChild != null) {
+                    LOGGER.info("Moving child out: {}", currentPageFirstChild)
+                    topCandidate.appendChild(currentPageFirstChild)
+                    currentPageFirstChild = currentPage.firstChild
                 }
 
                 currentPage.appendChild(topCandidate)
                 initializeNode(topCandidate, p)
             } else {
-                val alternativeCandidateAncestors = mutableListOf<List<Element>>()
+                val alternativeCandidateAncestors = mutableListOf<List<Node>>()
                 val topCandidateContentScore = topCandidate.getContentScore()
 
                 for (i in 1 until topCandidates.size) {
@@ -1734,9 +1696,9 @@ object ReadabilityUtils {
 
                 val minimumTopCandidates = 3
                 if (alternativeCandidateAncestors.size >= minimumTopCandidates) {
-                    parentOfTopCandidate = topCandidate.parent()
+                    parentOfTopCandidate = topCandidate.parentNode as? Element
 
-                    while (parentOfTopCandidate != null && parentOfTopCandidate.tagName() != "body") {
+                    while (parentOfTopCandidate != null && parentOfTopCandidate.tagName != "BODY") {
                         var listsContainingThisAncestor = 0
 
                         for (ancestors in alternativeCandidateAncestors) {
@@ -1752,7 +1714,7 @@ object ReadabilityUtils {
                             topCandidate = parentOfTopCandidate
                             break
                         }
-                        parentOfTopCandidate = parentOfTopCandidate.parent()
+                        parentOfTopCandidate = parentOfTopCandidate.parentNode as? Element
                     }
                 }
 
@@ -1760,13 +1722,13 @@ object ReadabilityUtils {
                     initializeNode(topCandidate, p)
                 }
 
-                parentOfTopCandidate = topCandidate?.parent()
+                parentOfTopCandidate = topCandidate?.parentNode as? Element
                 var lastScore = topCandidate?.getContentScore() ?: 0.0
                 val scoreThreshold = lastScore / 3
 
-                while (parentOfTopCandidate != null && parentOfTopCandidate.tagName() != "body") {
+                while (parentOfTopCandidate != null && parentOfTopCandidate.tagName != "BODY") {
                     if (!parentOfTopCandidate.hasContentScore()) {
-                        parentOfTopCandidate = parentOfTopCandidate.parent()
+                        parentOfTopCandidate = parentOfTopCandidate.parentNode as? Element
                         continue
                     }
 
@@ -1779,16 +1741,16 @@ object ReadabilityUtils {
                         break
                     }
                     lastScore = parentOfTopCandidate.getContentScore()
-                    parentOfTopCandidate = parentOfTopCandidate.parent()
+                    parentOfTopCandidate = parentOfTopCandidate.parentNode as? Element
                 }
 
-                parentOfTopCandidate = topCandidate?.parent()
+                parentOfTopCandidate = topCandidate?.parentNode as? Element
                 while (parentOfTopCandidate != null &&
-                    parentOfTopCandidate.tagName() != "body" &&
-                    parentOfTopCandidate.childrenSize() == 1
+                    parentOfTopCandidate.tagName != "BODY" &&
+                    parentOfTopCandidate.children.size == 1
                 ) {
                     topCandidate = parentOfTopCandidate
-                    parentOfTopCandidate = topCandidate.parent()
+                    parentOfTopCandidate = topCandidate.parentNode as? Element
                 }
 
                 if (topCandidate != null && !topCandidate.hasContentScore()) {
@@ -1798,7 +1760,7 @@ object ReadabilityUtils {
 
             var articleContent = document.createElement("div")
             if (isPaging) {
-                articleContent.id("readability-content")
+                articleContent.id = "readability-content"
             }
 
             val siblingScoreThreshold =
@@ -1806,9 +1768,9 @@ object ReadabilityUtils {
                     10.0,
                     (topCandidate?.getContentScore() ?: 0.0) * 0.2,
                 )
-            parentOfTopCandidate = topCandidate?.parent()
+            parentOfTopCandidate = topCandidate?.parentNode as? Element
 
-            val siblings = parentOfTopCandidate?.children()?.toList() ?: emptyList()
+            val siblings = parentOfTopCandidate?.children?.toList() ?: emptyList()
 
             siblings.forEach { sibling ->
                 var append = false
@@ -1822,13 +1784,13 @@ object ReadabilityUtils {
                 } else {
                     var contentBonus = 0.0
 
-                    if (sibling.className() == topCandidate?.className() && topCandidate.className().isNotEmpty()) {
+                    if (sibling.className == topCandidate?.className && topCandidate.className.isNotEmpty()) {
                         contentBonus += topCandidate.getContentScore() * 0.2
                     }
 
                     if (sibling.hasContentScore() && sibling.getContentScore() + contentBonus >= siblingScoreThreshold) {
                         append = true
-                    } else if (sibling.tagName() == "p") {
+                    } else if (sibling.tagName == "P") {
                         val linkDensity = getLinkDensity(sibling)
                         val nodeContent = getInnerText(sibling)
                         val nodeLength = nodeContent.length
@@ -1847,7 +1809,7 @@ object ReadabilityUtils {
                     LOGGER.info("Appending node: {}", sibling)
 
                     val nodeToAppend =
-                        if (sibling.tagName() !in ALTER_TO_DIV_EXCEPTIONS) {
+                        if (sibling.tagName !in ALTER_TO_DIV_EXCEPTIONS) {
                             LOGGER.info("Altering sibling: {} to div.", sibling)
                             setNodeTag(sibling, "div")
                         } else {
@@ -1860,33 +1822,33 @@ object ReadabilityUtils {
             }
 
             if (p.debug) {
-                LOGGER.info("Article content pre-prep: {}", articleContent.html())
+                LOGGER.info("Article content pre-prep: {}", articleContent.innerHTML)
             }
 
             prepArticle(articleContent, p)
 
             if (p.debug) {
-                LOGGER.info("Article content post-prep: {}", articleContent.html())
+                LOGGER.info("Article content post-prep: {}", articleContent.innerHTML)
             }
 
             if (neededToCreateTopCandidate) {
-                topCandidate?.id("readability-page-1")
-                topCandidate?.addClass("page")
+                topCandidate?.id = "readability-page-1"
+                topCandidate?.className = "page"
             } else {
                 val div = document.createElement("div")
-                div.id("readability-page-1")
-                div.addClass("page")
+                div.id = "readability-page-1"
+                div.className = "page"
 
-                while (articleContent.childrenSize() > 0) {
-                    val firstChild = articleContent.child(0)
-                    firstChild.remove()
-                    div.appendChild(firstChild)
+                var articleContentFirstChild = articleContent.firstChild
+                while (articleContentFirstChild != null) {
+                    div.appendChild(articleContentFirstChild)
+                    articleContentFirstChild = articleContent.firstChild
                 }
                 articleContent.appendChild(div)
             }
 
             if (p.debug) {
-                LOGGER.info("Article content after paging: {}", articleContent.html())
+                LOGGER.info("Article content after paging: {}", articleContent.innerHTML)
             }
 
             var parseSuccessful = true
@@ -1894,7 +1856,7 @@ object ReadabilityUtils {
 
             if (textLength < p.charThreshold) {
                 parseSuccessful = false
-                currentPage.html(pageCacheHtml)
+                currentPage.innerHTML = pageCacheHtml
 
                 p.attempts.add(ReadabilityProperties.Attempt(articleContent, textLength))
 
@@ -1922,11 +1884,11 @@ object ReadabilityUtils {
                         (parentOfTopCandidate?.let { getNodeAncestors(it) } ?: emptyList())
 
                 for (ancestor in ancestors) {
-                    if (ancestor.tagName().isEmpty()) {
+                    if ((ancestor as? Element)?.tagName.isNullOrEmpty()) {
                         continue
                     }
-                    val dir = ancestor.attr("dir")
-                    if (dir.isNotEmpty()) {
+                    val dir = ancestor.getAttribute("dir")
+                    if (dir != null) {
                         p.articleDir = dir
                         break
                     }

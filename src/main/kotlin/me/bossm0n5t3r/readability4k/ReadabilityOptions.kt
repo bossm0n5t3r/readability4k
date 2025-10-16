@@ -1,6 +1,8 @@
 package me.bossm0n5t3r.readability4k
 
-import org.jsoup.nodes.Element
+import me.bossm0n5t3r.readability4k.dom.Element
+import me.bossm0n5t3r.readability4k.dom.Node
+import me.bossm0n5t3r.readability4k.dom.TextNode
 import java.math.BigDecimal
 
 data class ReadabilityOptions(
@@ -10,7 +12,13 @@ data class ReadabilityOptions(
     val charThreshold: Int = DEFAULT_CHAR_THRESHOLD,
     val classesToPreserve: List<String> = emptyList(),
     val keepClasses: Boolean = false,
-    val serializer: ((Element) -> String) = { element -> element.html() },
+    val serializer: ((Node) -> String) = { node ->
+        when (node) {
+            is Element -> node.innerHTML
+            is TextNode -> node.innerHTML
+            else -> ""
+        }
+    },
     val disableJSONLD: Boolean = false,
     val allowedVideoRegex: Regex = Regexps.VIDEOS,
     val linkDensityModifier: BigDecimal = BigDecimal.ONE,

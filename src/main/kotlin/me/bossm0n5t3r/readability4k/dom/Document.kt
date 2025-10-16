@@ -1,4 +1,4 @@
-package me.bossm0n5t3r.readability4k.jsdom
+package me.bossm0n5t3r.readability4k.dom
 
 import java.net.URI
 
@@ -44,6 +44,8 @@ class Document(
         }
 
     fun getElementsByTagName(tag: String): List<Element> = NodeUtils.getElementsByTagName(this, tag)
+
+    fun querySelectorAll(selector: String): List<Element> = NodeUtils.querySelectorAll(this, selector)
 
     fun getElementById(id: String): Element? {
         fun getElem(node: Node): Element? {

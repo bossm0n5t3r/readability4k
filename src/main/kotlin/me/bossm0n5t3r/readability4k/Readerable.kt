@@ -2,8 +2,8 @@
 
 package me.bossm0n5t3r.readability4k
 
-import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
+import me.bossm0n5t3r.readability4k.dom.Document
+import me.bossm0n5t3r.readability4k.dom.Element
 import java.math.BigDecimal
 import kotlin.math.sqrt
 
@@ -15,22 +15,22 @@ import kotlin.math.sqrt
  */
 fun isNodeVisible(node: Element): Boolean {
     // Check for display: none style
-    val style = node.attr("style")
+    val style = node.getAttribute("style").orEmpty()
     if (style.contains("display:none") || style.contains("display: none")) {
         return false
     }
 
     // Check for hidden attribute
-    if (node.hasAttr("hidden")) {
+    if (node.hasAttribute("hidden")) {
         return false
     }
 
     // Check for aria-hidden attribute
-    if (node.hasAttr("aria-hidden")) {
-        val ariaHidden = node.attr("aria-hidden")
+    if (node.hasAttribute("aria-hidden")) {
+        val ariaHidden = node.getAttribute("aria-hidden").orEmpty()
         if (ariaHidden == "true") {
             // Allow fallback-image for wikimedia math images
-            val className = node.className()
+            val className = node.className
             if (!className.contains("fallback-image")) {
                 return false
             }
@@ -51,7 +51,7 @@ fun isProbablyReaderable(
     doc: Document,
     options: ReaderableOptions = ReaderableOptions(),
 ): Boolean {
-    val nodes = doc.select("p, pre, article")
+    val nodes = doc.querySelectorAll("p, pre, article")
 
     // Get <div> nodes which have <br> node(s) and append them into the nodes collection.
     // Some articles' DOM structures might look like
@@ -60,8 +60,8 @@ fun isProbablyReaderable(
     //   <br>
     //   Sentences<br>
     // </div>
-    val brNodes = doc.select("div > br")
-    val nodeSet = nodes.toSet() + brNodes.mapNotNull { it.parent() }.toSet()
+    val brNodes = doc.querySelectorAll("div > br")
+    val nodeSet = nodes.toSet() + brNodes.mapNotNull { it.parentNode as? Element }.toSet()
 
     var score = BigDecimal.ZERO
 
@@ -72,23 +72,18 @@ fun isProbablyReaderable(
             return@any false
         }
 
-        val matchString = "${node.className()} ${node.id()}"
+        val matchString = "${node.className} ${node.id}"
         if (Regexps.UNLIKELY_CANDIDATES.containsMatchIn(matchString) &&
             !Regexps.OK_MAYBE_ITS_A_CANDIDATE.containsMatchIn(matchString)
         ) {
             return@any false
         }
 
-        if (node.select("li p").isNotEmpty()) {
+        if (node.querySelectorAll("li p").isNotEmpty()) {
             return@any false
         }
 
-        val htmlLength = node.wholeText().length
-        if (htmlLength < options.minContentLength) {
-            return@any false
-        }
-
-        val textContentLength = node.html().trim().length
+        val textContentLength = node.textContent.trim().length
         if (textContentLength < options.minContentLength) {
             return@any false
         }
