@@ -22,10 +22,7 @@ class DOMParserTest :
         val baseDoc = DOMParser().parse(baseTestCase, "http://fakehost/")
 
         describe("Test JSDOM functionality") {
-            fun nodeExpect(
-                actual: Node?,
-                expected: Node?,
-            ) {
+            fun nodeExpect(actual: Node?, expected: Node?) {
                 if (actual == null && expected == null) {
                     LOGGER.debug("Both are null")
                 }
@@ -190,7 +187,8 @@ class DOMParserTest :
                     }
 
                     parent.childNodes.size shouldBe childCount
-                    parent.children.size shouldBe if (replacedAnElement) childElCount else childElCount + 1
+                    parent.children.size shouldBe
+                        if (replacedAnElement) childElCount else childElCount + 1
 
                     parent.replaceChild(replacedNode, p)
 
@@ -296,9 +294,8 @@ class DOMParserTest :
                 val p = doc.createElement("p")
                 val unconnected = doc.createElement("span")
 
-                shouldThrow<IllegalArgumentException> {
-                    div.insertBefore(p, unconnected)
-                }.message shouldBe "insertBefore: reference node not found"
+                shouldThrow<IllegalArgumentException> { div.insertBefore(p, unconnected) }
+                    .message shouldBe "insertBefore: reference node not found"
             }
 
             it("should have a working createDocumentFragment") {
@@ -417,8 +414,10 @@ class DOMParserTest :
             }
 
             it("should have decoded correctly") {
-                p.textContent shouldBe """Hello, everyone & all their friends, <this> is a " test with ' quotes."""
-                txtNode?.textContent shouldBe """Hello, everyone & all their friends, <this> is a " test with ' quotes."""
+                p.textContent shouldBe
+                    """Hello, everyone & all their friends, <this> is a " test with ' quotes."""
+                txtNode?.textContent shouldBe
+                    """Hello, everyone & all their friends, <this> is a " test with ' quotes."""
             }
 
             it("should handle updates via textContent correctly") {
@@ -519,7 +518,8 @@ class DOMParserTest :
                 docFirstChildFirstChild.localName shouldBe "svg"
 
                 docFirstChildFirstChild.firstChild.shouldBeInstanceOf<Element>()
-                val docFirstChildFirstChildFirstChild = docFirstChildFirstChild.firstChild as Element
+                val docFirstChildFirstChildFirstChild =
+                    docFirstChildFirstChild.firstChild as Element
 
                 docFirstChildFirstChildFirstChild.tagName shouldBe "CLIPPATH"
                 docFirstChildFirstChildFirstChild.localName shouldBe "clippath"
@@ -544,7 +544,8 @@ class DOMParserTest :
                 docFirstChildFirstChild.childNodes.size shouldBe 1
 
                 docFirstChildFirstChild.firstChild.shouldBeInstanceOf<Element>()
-                val docFirstChildFirstChildFirstChild = docFirstChildFirstChild.firstChild as Element
+                val docFirstChildFirstChildFirstChild =
+                    docFirstChildFirstChild.firstChild as Element
 
                 docFirstChildFirstChildFirstChild.localName shouldBe "p"
             }
@@ -552,10 +553,7 @@ class DOMParserTest :
 
         describe("baseURI parsing") {
             it("should handle various types of relative and absolute base URIs") {
-                fun checkBase(
-                    base: String,
-                    expectedResult: String,
-                ) {
+                fun checkBase(base: String, expectedResult: String) {
                     val html = """<html><head><base href='$base'></base></head><body/></html>"""
                     val doc = DOMParser().parse(html, "http://fakehost/some/dir/")
                     doc.baseURI shouldBe expectedResult

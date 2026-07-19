@@ -1,8 +1,6 @@
 package me.bossm0n5t3r.readability4k.dom
 
-enum class NodeType(
-    val value: Int,
-) {
+enum class NodeType(val value: Int) {
     ELEMENT_NODE(1),
     ATTRIBUTE_NODE(2),
     TEXT_NODE(3),
@@ -14,8 +12,7 @@ enum class NodeType(
     DOCUMENT_NODE(9),
     DOCUMENT_TYPE_NODE(10),
     DOCUMENT_FRAGMENT_NODE(11),
-    NOTATION_NODE(12),
-    ;
+    NOTATION_NODE(12);
 
     companion object {
         fun fromValue(value: Int): NodeType? = entries.find { it.value == value }

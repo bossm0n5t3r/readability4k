@@ -15,55 +15,17 @@ const val DEFAULT_N_TOP_CANDIDATES = 5
 const val DEFAULT_CHAR_THRESHOLD = 500
 
 // Element tags to score by default
-val DEFAULT_TAGS_TO_SCORE =
-    setOf(
-        "SECTION",
-        "H2",
-        "H3",
-        "H4",
-        "H5",
-        "H6",
-        "P",
-        "TD",
-        "PRE",
-    )
+val DEFAULT_TAGS_TO_SCORE = setOf("SECTION", "H2", "H3", "H4", "H5", "H6", "P", "TD", "PRE")
 
 // Roles that are unlikely to contain article content
 val UNLIKELY_ROLES =
-    setOf(
-        "menu",
-        "menubar",
-        "complementary",
-        "navigation",
-        "alert",
-        "alertdialog",
-        "dialog",
-    )
+    setOf("menu", "menubar", "complementary", "navigation", "alert", "alertdialog", "dialog")
 
 // Elements that can be converted from DIV to P
-val DIV_TO_P_ELEMS =
-    setOf(
-        "BLOCKQUOTE",
-        "DL",
-        "DIV",
-        "IMG",
-        "OL",
-        "P",
-        "PRE",
-        "TABLE",
-        "UL",
-    )
+val DIV_TO_P_ELEMS = setOf("BLOCKQUOTE", "DL", "DIV", "IMG", "OL", "P", "PRE", "TABLE", "UL")
 
 // Exceptions when altering elements to DIV
-val ALTER_TO_DIV_EXCEPTIONS =
-    setOf(
-        "DIV",
-        "ARTICLE",
-        "SECTION",
-        "P",
-        "OL",
-        "UL",
-    )
+val ALTER_TO_DIV_EXCEPTIONS = setOf("DIV", "ARTICLE", "SECTION", "P", "OL", "UL")
 
 // Presentational attributes that should be removed
 val PRESENTATIONAL_ATTRIBUTES =
@@ -83,14 +45,7 @@ val PRESENTATIONAL_ATTRIBUTES =
     )
 
 // Elements with deprecated size attributes
-val DEPRECATED_SIZE_ATTRIBUTE_ELEMS =
-    setOf(
-        "TABLE",
-        "TH",
-        "TD",
-        "HR",
-        "PRE",
-    )
+val DEPRECATED_SIZE_ATTRIBUTE_ELEMS = setOf("TABLE", "TH", "TD", "HR", "PRE")
 
 // Phrasing elements (inline content)
 val PHRASING_ELEMS =
@@ -140,11 +95,4 @@ val PHRASING_ELEMS =
 val CLASSES_TO_PRESERVE = setOf("page")
 
 // HTML entities that need to be escaped
-val HTML_ESCAPE_MAP =
-    mapOf(
-        "lt" to "<",
-        "gt" to ">",
-        "amp" to "&",
-        "quot" to "\"",
-        "apos" to "'",
-    )
+val HTML_ESCAPE_MAP = mapOf("lt" to "<", "gt" to ">", "amp" to "&", "quot" to "\"", "apos" to "'")

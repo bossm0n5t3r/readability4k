@@ -1,5 +1,7 @@
 package me.bossm0n5t3r.readability4k
 
+import java.math.BigDecimal
+import java.net.URI
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -16,30 +18,21 @@ import me.bossm0n5t3r.readability4k.dom.HtmlEntities.decodeHTML
 import me.bossm0n5t3r.readability4k.dom.Node
 import me.bossm0n5t3r.readability4k.dom.NodeType
 import me.bossm0n5t3r.readability4k.dom.ReadabilityData
-import java.math.BigDecimal
-import java.net.URI
 
 /**
- * Utility functions for Readability processing.
- * Contains helper methods extracted from the original JavaScript implementation.
+ * Utility functions for Readability processing. Contains helper methods extracted from the original
+ * JavaScript implementation.
  */
 object ReadabilityUtils {
-    /**
-     * Get the text content length of an element
-     */
-    fun getInnerText(
-        element: Element,
-        normalizeSpaces: Boolean = true,
-    ): String =
+    /** Get the text content length of an element */
+    fun getInnerText(element: Element, normalizeSpaces: Boolean = true): String =
         if (normalizeSpaces) {
             element.textContent.replace(Regexps.NORMALIZE, " ")
         } else {
             element.textContent
         }
 
-    /**
-     * Calculate link density of an element
-     */
+    /** Calculate link density of an element */
     fun getLinkDensity(element: Element): BigDecimal {
         val textLength = getInnerText(element).length
         if (textLength == 0) return BigDecimal.ZERO
@@ -47,7 +40,8 @@ object ReadabilityUtils {
             element.getElementsByTagName("a").sumOf { linkNode ->
                 val href = linkNode.getAttribute("href").orEmpty()
                 val coefficient =
-                    if (href.isNotBlank() && href.matches(Regexps.HASH_URL)) BigDecimal.valueOf(0.3) else BigDecimal.ONE
+                    if (href.isNotBlank() && href.matches(Regexps.HASH_URL)) BigDecimal.valueOf(0.3)
+                    else BigDecimal.ONE
                 getInnerText(linkNode).length.toBigDecimal() * coefficient
             }
         return linkLength / textLength.toBigDecimal()
@@ -66,25 +60,18 @@ object ReadabilityUtils {
         val tagName = element?.tagName
         return node.nodeType == NodeType.TEXT_NODE ||
             tagName in PHRASING_ELEMS ||
-            ((tagName == "A" || tagName == "DEL" || tagName == "INS") && element.childNodes.all { isPhrasingContent(it) })
+            ((tagName == "A" || tagName == "DEL" || tagName == "INS") &&
+                element.childNodes.all { isPhrasingContent(it) })
     }
 
-    /**
-     * Get the number of times a string s appears in the node e.
-     */
-    fun getCharCount(
-        element: Element,
-        delimiters: String = ",",
-    ): Int = getInnerText(element).split(delimiters).size - 1
+    /** Get the number of times a string s appears in the node e. */
+    fun getCharCount(element: Element, delimiters: String = ","): Int =
+        getInnerText(element).split(delimiters).size - 1
 
     fun isWhiteSpace(node: Node): Boolean {
         val element = node as? Element
-        return (
-            node.nodeType == NodeType.TEXT_NODE &&
-                node.textContent
-                    .trim()
-                    .isEmpty()
-        ) || (node.nodeType == NodeType.ELEMENT_NODE && element != null && element.tagName == "BR")
+        return (node.nodeType == NodeType.TEXT_NODE && node.textContent.trim().isEmpty()) ||
+            (node.nodeType == NodeType.ELEMENT_NODE && element != null && element.tagName == "BR")
     }
 
     fun isUrl(string: String) =
@@ -96,49 +83,36 @@ object ReadabilityUtils {
         }
 
     /**
-     * Check if this node has only whitespace and a single element with a given tag
-     * Returns false if the DIV node contains non-empty text nodes
-     * or if it contains no element with a given tag or more than 1 element.
+     * Check if this node has only whitespace and a single element with a given tag Returns false if
+     * the DIV node contains non-empty text nodes or if it contains no element with a given tag or
+     * more than 1 element.
      */
-    fun hasSingleTagInsideElement(
-        element: Element,
-        tag: String,
-    ): Boolean {
-        if (element.children.size != 1 || element.children
-                .firstOrNull()
-                ?.tagName
-                ?.equals(tag, ignoreCase = true) != true
+    fun hasSingleTagInsideElement(element: Element, tag: String): Boolean {
+        if (
+            element.children.size != 1 ||
+                element.children.firstOrNull()?.tagName?.equals(tag, ignoreCase = true) != true
         ) {
             return false
         }
-        return element.childNodes.none { it.nodeType == NodeType.TEXT_NODE && Regexps.HAS_CONTENT.containsMatchIn(it.textContent) }
+        return element.childNodes.none {
+            it.nodeType == NodeType.TEXT_NODE && Regexps.HAS_CONTENT.containsMatchIn(it.textContent)
+        }
     }
 
-    fun getAllNodesWithTag(
-        document: Document,
-        tagNames: List<String>,
-    ): List<Element> = tagNames.flatMap { document.getElementsByTagName(it) }
+    fun getAllNodesWithTag(document: Document, tagNames: List<String>): List<Element> =
+        tagNames.flatMap {
+            document.getElementsByTagName(it)
+        }
 
-    fun getAllNodesWithTag(
-        node: Element,
-        tagNames: List<String>,
-    ): List<Element> = tagNames.flatMap { node.getElementsByTagName(it) }
+    fun getAllNodesWithTag(node: Element, tagNames: List<String>): List<Element> =
+        tagNames.flatMap {
+            node.getElementsByTagName(it)
+        }
 
-    fun textSimilarity(
-        textA: String,
-        textB: String,
-    ): BigDecimal {
-        val tokensA =
-            textA
-                .lowercase()
-                .split(Regexps.TOKENIZE)
-                .filter { it.isNotBlank() }
+    fun textSimilarity(textA: String, textB: String): BigDecimal {
+        val tokensA = textA.lowercase().split(Regexps.TOKENIZE).filter { it.isNotBlank() }
 
-        val tokensB =
-            textB
-                .lowercase()
-                .split(Regexps.TOKENIZE)
-                .filter { it.isNotBlank() }
+        val tokensB = textB.lowercase().split(Regexps.TOKENIZE).filter { it.isNotBlank() }
 
         if (tokensA.isEmpty() || tokensB.isEmpty()) {
             return BigDecimal.ZERO
@@ -146,31 +120,28 @@ object ReadabilityUtils {
 
         val uniqTokensB = tokensB.filter { token -> !tokensA.contains(token) }
         val distanceB =
-            uniqTokensB.joinToString(" ").length.toBigDecimal() / tokensB.joinToString(" ").length.toBigDecimal()
+            uniqTokensB.joinToString(" ").length.toBigDecimal() /
+                tokensB.joinToString(" ").length.toBigDecimal()
 
         return BigDecimal.ONE - distanceB
     }
 
-    fun headerDuplicatesTitle(
-        element: Element,
-        p: ReadabilityProperties,
-    ): Boolean {
+    fun headerDuplicatesTitle(element: Element, p: ReadabilityProperties): Boolean {
         if (element.tagName != "H1" && element.tagName != "H2") {
             return false
         }
         val heading = getInnerText(element, false)
-        LOGGER.info("Evaluating similarity of header: {}, articleTitle: {}", heading, p.articleTitle)
+        LOGGER.info(
+            "Evaluating similarity of header: {}, articleTitle: {}",
+            heading,
+            p.articleTitle,
+        )
         val articleTitleInProperties =
-            requireNotNull(p.articleTitle) {
-                "articleTitle should not be null"
-            }
+            requireNotNull(p.articleTitle) { "articleTitle should not be null" }
         return textSimilarity(articleTitleInProperties, heading) > BigDecimal.valueOf(0.75)
     }
 
-    fun removeNodes(
-        elements: List<Element>,
-        filterFn: ((Element) -> Boolean)? = null,
-    ) {
+    fun removeNodes(elements: List<Element>, filterFn: ((Element) -> Boolean)? = null) {
         val nodeList = elements.toList()
         if (filterFn == null) {
             nodeList.forEach { it.remove() }
@@ -187,22 +158,13 @@ object ReadabilityUtils {
         }
     }
 
-    fun flagIsActive(
-        p: ReadabilityProperties,
-        flag: Int,
-    ): Boolean = (p.flags and flag) > 0
+    fun flagIsActive(p: ReadabilityProperties, flag: Int): Boolean = (p.flags and flag) > 0
 
-    fun removeFlag(
-        p: ReadabilityProperties,
-        flag: Int,
-    ) {
+    fun removeFlag(p: ReadabilityProperties, flag: Int) {
         p.flags = p.flags and flag.inv()
     }
 
-    fun getClassWeight(
-        element: Element,
-        p: ReadabilityProperties,
-    ): Int {
+    fun getClassWeight(element: Element, p: ReadabilityProperties): Int {
         if (flagIsActive(p, FLAG_WEIGHT_CLASSES).not()) {
             return 0
         }
@@ -230,10 +192,7 @@ object ReadabilityUtils {
         return weight
     }
 
-    fun cleanHeaders(
-        element: Element,
-        p: ReadabilityProperties,
-    ) {
+    fun cleanHeaders(element: Element, p: ReadabilityProperties) {
         val headingNodes = getAllNodesWithTag(element, listOf("h1", "h2"))
         removeNodes(headingNodes) { element ->
             val shouldRemove = getClassWeight(element, p) < 0
@@ -244,22 +203,15 @@ object ReadabilityUtils {
         }
     }
 
-    fun getTextDensity(
-        element: Element,
-        tags: List<String>,
-    ): BigDecimal {
+    fun getTextDensity(element: Element, tags: List<String>): BigDecimal {
         val textLength = getInnerText(element, true).length.toBigDecimal()
         if (textLength == BigDecimal.ZERO) return BigDecimal.ZERO
         val childrenLength =
-            getAllNodesWithTag(element, tags)
-                .sumOf { getInnerText(it, true).length.toBigDecimal() }
+            getAllNodesWithTag(element, tags).sumOf { getInnerText(it, true).length.toBigDecimal() }
         return childrenLength / textLength
     }
 
-    fun isValidByLine(
-        element: Element,
-        matchString: String,
-    ): Boolean {
+    fun isValidByLine(element: Element, matchString: String): Boolean {
         val rel = element.getAttribute("rel")
         val itemprop = element.getAttribute("itemprop").orEmpty()
         val bylineLength = element.textContent.trim().length
@@ -288,26 +240,30 @@ object ReadabilityUtils {
         if (element.textContent.trim().isNotEmpty()) return false
 
         val children = element.children
-        return children.isEmpty() || children.size == element.getElementsByTagName("br").size + element.getElementsByTagName("hr").size
+        return children.isEmpty() ||
+            children.size ==
+                element.getElementsByTagName("br").size + element.getElementsByTagName("hr").size
     }
 
     fun isProbablyVisible(element: Element): Boolean {
         val style = element.getAttribute("style")
-        if (style != null && (style.contains("visibility:hidden") || style.contains("visibility: hidden"))) {
+        if (
+            style != null &&
+                (style.contains("visibility:hidden") || style.contains("visibility: hidden"))
+        ) {
             return false
         }
         return isNodeVisible(element)
     }
 
-    fun getNextNode(
-        element: Element,
-        ignoreSelfAndKids: Boolean = false,
-    ): Element? {
+    fun getNextNode(element: Element, ignoreSelfAndKids: Boolean = false): Element? {
         if (!ignoreSelfAndKids && element.firstElementChild != null) {
             return element.firstElementChild
         }
 
-        element.nextElementSibling?.let { return it }
+        element.nextElementSibling?.let {
+            return it
+        }
 
         var parent = element.parentNode
         while (parent != null && parent is Element && parent.nextElementSibling == null) {
@@ -323,10 +279,7 @@ object ReadabilityUtils {
         return nextElement
     }
 
-    fun fixRelativeUris(
-        articleContent: Element,
-        p: ReadabilityProperties,
-    ) {
+    fun fixRelativeUris(articleContent: Element, p: ReadabilityProperties) {
         val document = p.document
         val baseURI = document.baseURI
         val documentURI = document.documentURI
@@ -338,8 +291,7 @@ object ReadabilityUtils {
 
             try {
                 return URI(baseURI).resolve(uri).toString()
-            } catch (ex: Exception) {
-            }
+            } catch (ex: Exception) {}
             return uri
         }
 
@@ -370,14 +322,7 @@ object ReadabilityUtils {
         val medias =
             getAllNodesWithTag(
                 articleContent,
-                listOf(
-                    "img",
-                    "picture",
-                    "figure",
-                    "video",
-                    "audio",
-                    "source",
-                ),
+                listOf("img", "picture", "figure", "video", "audio", "source"),
             )
 
         medias.forEach { media ->
@@ -427,9 +372,10 @@ object ReadabilityUtils {
         while (node != null) {
             val parent = node.parentNode
 
-            if (parent != null &&
-                (node.tagName == "DIV" || node.tagName == "SECTION") &&
-                !(node.id.isNotEmpty() && node.id.startsWith("readability"))
+            if (
+                parent != null &&
+                    (node.tagName == "DIV" || node.tagName == "SECTION") &&
+                    !(node.id.isNotEmpty() && node.id.startsWith("readability"))
             ) {
                 if (isElementWithoutContent(node)) {
                     node = removeAndGetNext(node)
@@ -437,7 +383,7 @@ object ReadabilityUtils {
                 }
                 if (
                     hasSingleTagInsideElement(node, "DIV") ||
-                    hasSingleTagInsideElement(node, "SECTION")
+                        hasSingleTagInsideElement(node, "SECTION")
                 ) {
                     val childElement = node.children.firstOrNull()
 
@@ -458,10 +404,7 @@ object ReadabilityUtils {
         }
     }
 
-    fun cleanClasses(
-        node: Element,
-        p: ReadabilityProperties,
-    ) {
+    fun cleanClasses(node: Element, p: ReadabilityProperties) {
         val preservedClasses =
             node
                 .getAttribute("class")
@@ -481,10 +424,7 @@ object ReadabilityUtils {
         node.children.forEach { cleanClasses(it, p) }
     }
 
-    fun postProcessContent(
-        articleContent: Element,
-        p: ReadabilityProperties,
-    ) {
+    fun postProcessContent(articleContent: Element, p: ReadabilityProperties) {
         fixRelativeUris(articleContent, p)
         simplifyNestedElements(articleContent)
         if (!p.keepClasses) {
@@ -492,19 +432,13 @@ object ReadabilityUtils {
         }
     }
 
-    fun setNodeTag(
-        node: Element,
-        tag: String,
-    ): Element {
+    fun setNodeTag(node: Element, tag: String): Element {
         node.localName = tag.lowercase()
         node.tagName = tag.uppercase()
         return node
     }
 
-    fun replaceNodeTags(
-        nodeList: List<Element>,
-        newTagName: String,
-    ) {
+    fun replaceNodeTags(nodeList: List<Element>, newTagName: String) {
         for (node in nodeList) {
             setNodeTag(node, newTagName)
         }
@@ -512,19 +446,17 @@ object ReadabilityUtils {
 
     fun nextNode(node: Node?): Node? {
         var next = node
-        while (next != null &&
-            next.nodeType != NodeType.ELEMENT_NODE &&
-            Regexps.WHITESPACE.containsMatchIn(next.textContent)
+        while (
+            next != null &&
+                next.nodeType != NodeType.ELEMENT_NODE &&
+                Regexps.WHITESPACE.containsMatchIn(next.textContent)
         ) {
             next = next.nextSibling
         }
         return next
     }
 
-    fun replaceBrs(
-        elem: Element,
-        p: ReadabilityProperties,
-    ) {
+    fun replaceBrs(elem: Element, p: ReadabilityProperties) {
         val brElements = getAllNodesWithTag(elem, listOf("br"))
 
         brElements.forEach { br ->
@@ -599,10 +531,7 @@ object ReadabilityUtils {
         return false
     }
 
-    fun cleanMatchedNodes(
-        element: Element,
-        filter: (Element, String) -> Boolean,
-    ) {
+    fun cleanMatchedNodes(element: Element, filter: (Element, String) -> Boolean) {
         val endOfSearchMarkerNode = getNextNode(element, true)
         var next = getNextNode(element)
 
@@ -621,7 +550,8 @@ object ReadabilityUtils {
     fun getArticleTitle(p: ReadabilityProperties): String {
         val document = p.document
 
-        fun wordCount(str: String): Int = if (str.trim().isEmpty()) 0 else str.split(Regex("\\s+")).size
+        fun wordCount(str: String): Int =
+            if (str.trim().isEmpty()) 0 else str.split(Regex("\\s+")).size
 
         var curTitle = ""
         var origTitle = ""
@@ -636,8 +566,7 @@ object ReadabilityUtils {
                     origTitle = curTitle
                 }
             }
-        } catch (e: Exception) {
-        }
+        } catch (e: Exception) {}
 
         var titleHadHierarchicalSeparators = false
 
@@ -656,7 +585,10 @@ object ReadabilityUtils {
                 if (wordCount(curTitle) < 3) {
                     curTitle =
                         origTitle.replace(
-                            Regex("""^[^$titleSeparators]*[$titleSeparators]""", RegexOption.IGNORE_CASE),
+                            Regex(
+                                """^[^$titleSeparators]*[$titleSeparators]""",
+                                RegexOption.IGNORE_CASE,
+                            ),
                             "",
                         )
                 }
@@ -664,10 +596,7 @@ object ReadabilityUtils {
         } else if (curTitle.contains(": ")) {
             val headings = getAllNodesWithTag(document, listOf("h1", "h2"))
             val trimmedTitle = curTitle.trim()
-            val match =
-                headings.someNode { heading ->
-                    heading.textContent.trim() == trimmedTitle
-                }
+            val match = headings.someNode { heading -> heading.textContent.trim() == trimmedTitle }
 
             if (!match) {
                 val lastColonIndex = origTitle.lastIndexOf(":")
@@ -677,7 +606,9 @@ object ReadabilityUtils {
                         curTitle = origTitle.substring(origTitle.indexOf(":") + 1).trim()
                     } else {
                         val firstColonIndex = origTitle.indexOf(":")
-                        if (firstColonIndex != -1 && wordCount(origTitle.take(firstColonIndex)) > 5) {
+                        if (
+                            firstColonIndex != -1 && wordCount(origTitle.take(firstColonIndex)) > 5
+                        ) {
                             curTitle = origTitle
                         }
                     }
@@ -686,19 +617,16 @@ object ReadabilityUtils {
         } else if (curTitle.length !in 15..150) {
             val h1Elements = document.getElementsByTagName("h1")
 
-            h1Elements.singleOrNull()?.let {
-                curTitle = getInnerText(it)
-            }
+            h1Elements.singleOrNull()?.let { curTitle = getInnerText(it) }
         }
 
         curTitle = curTitle.trim().replace(Regexps.NORMALIZE, " ")
 
         val curTitleWordCount = wordCount(curTitle)
-        if (curTitleWordCount <= 4 &&
-            (
-                !titleHadHierarchicalSeparators ||
-                    curTitleWordCount != wordCount(origTitle.replace(separatorRegex, "")) - 1
-            )
+        if (
+            curTitleWordCount <= 4 &&
+                (!titleHadHierarchicalSeparators ||
+                    curTitleWordCount != wordCount(origTitle.replace(separatorRegex, "")) - 1)
         ) {
             curTitle = origTitle
         }
@@ -706,10 +634,7 @@ object ReadabilityUtils {
         return curTitle
     }
 
-    fun prepDocument(
-        document: Document,
-        p: ReadabilityProperties,
-    ) {
+    fun prepDocument(document: Document, p: ReadabilityProperties) {
         removeNodes(getAllNodesWithTag(document, listOf("style")))
 
         document.body?.let { replaceBrs(it, p) }
@@ -766,11 +691,7 @@ object ReadabilityUtils {
         return false
     }
 
-    fun clean(
-        e: Element,
-        tag: String,
-        p: ReadabilityProperties,
-    ) {
+    fun clean(e: Element, tag: String, p: ReadabilityProperties) {
         val isEmbed = tag in setOf("object", "embed", "iframe")
 
         removeNodes(getAllNodesWithTag(e, listOf(tag))) { element ->
@@ -779,7 +700,10 @@ object ReadabilityUtils {
                     return@removeNodes false
                 }
 
-                if (element.tagName == "OBJECT" && p.allowedVideoRegex.containsMatchIn(element.innerHTML)) {
+                if (
+                    element.tagName == "OBJECT" &&
+                        p.allowedVideoRegex.containsMatchIn(element.innerHTML)
+                ) {
                     return@removeNodes false
                 }
             }
@@ -787,10 +711,7 @@ object ReadabilityUtils {
         }
     }
 
-    fun getNodeAncestors(
-        node: Node,
-        maxDepth: Int = 0,
-    ): List<Node> {
+    fun getNodeAncestors(node: Node, maxDepth: Int = 0): List<Node> {
         var i = 0
         val ancestors = mutableListOf<Node>()
         var currentNode: Node? = node
@@ -817,10 +738,7 @@ object ReadabilityUtils {
         return decodeHTML(str)
     }
 
-    fun initializeNode(
-        node: Element,
-        p: ReadabilityProperties,
-    ) {
+    fun initializeNode(node: Element, p: ReadabilityProperties) {
         node.setContentScore()
 
         val tagName = node.tagName
@@ -828,9 +746,24 @@ object ReadabilityUtils {
         val contentScore =
             when (tagName) {
                 "DIV" -> 5
-                "PRE", "TD", "BLOCKQUOTE" -> 3
-                "ADDRESS", "OL", "UL", "DL", "DD", "DT", "LI", "FORM" -> -3
-                "H1", "H2", "H3", "H4", "H5", "H6", "TH" -> -5
+                "PRE",
+                "TD",
+                "BLOCKQUOTE" -> 3
+                "ADDRESS",
+                "OL",
+                "UL",
+                "DL",
+                "DD",
+                "DT",
+                "LI",
+                "FORM" -> -3
+                "H1",
+                "H2",
+                "H3",
+                "H4",
+                "H5",
+                "H6",
+                "TH" -> -5
                 else -> 0
             } + getClassWeight(node, p)
 
@@ -866,9 +799,7 @@ object ReadabilityUtils {
             }
 
             val dataTableDescendants = setOf("col", "colgroup", "tfoot", "thead", "th")
-            val descendantExists = { tag: String ->
-                table.getElementsByTagName(tag).isNotEmpty()
-            }
+            val descendantExists = { tag: String -> table.getElementsByTagName(tag).isNotEmpty() }
 
             if (dataTableDescendants.any(descendantExists)) {
                 table.setAttribute("_readabilityDataTable", "true")
@@ -930,7 +861,11 @@ object ReadabilityUtils {
                         continue
                     }
 
-                    if (attr.name == "src" || attr.name == "srcset" || IMAGE_EXTENSION_REGEX.containsMatchIn(attr.value)) {
+                    if (
+                        attr.name == "src" ||
+                            attr.name == "srcset" ||
+                            IMAGE_EXTENSION_REGEX.containsMatchIn(attr.value)
+                    ) {
                         if (newImg.getAttribute(attr.name) == attr.value) {
                             continue
                         }
@@ -943,17 +878,12 @@ object ReadabilityUtils {
                     }
                 }
 
-                tmp.firstElementChild?.let {
-                    noscript.parentNode?.replaceChild(it, prevElement)
-                }
+                tmp.firstElementChild?.let { noscript.parentNode?.replaceChild(it, prevElement) }
             }
         }
     }
 
-    fun fixLazyImages(
-        root: Element,
-        p: ReadabilityProperties,
-    ) {
+    fun fixLazyImages(root: Element, p: ReadabilityProperties) {
         getAllNodesWithTag(root, listOf("img", "picture", "figure")).forEach { elem ->
             if (elem.src.isNotEmpty() && Regexps.B64_DATA_URL.containsMatchIn(elem.src)) {
                 val parts = Regexps.B64_DATA_URL.find(elem.src)
@@ -975,8 +905,9 @@ object ReadabilityUtils {
             }
 
             val srcsetAttr = elem.getAttribute("srcset")
-            if ((elem.hasAttribute("src") || (srcsetAttr != null && srcsetAttr != "null")) &&
-                !elem.className.contains("lazy", ignoreCase = true)
+            if (
+                (elem.hasAttribute("src") || (srcsetAttr != null && srcsetAttr != "null")) &&
+                    !elem.className.contains("lazy", ignoreCase = true)
             ) {
                 return@forEach
             }
@@ -996,7 +927,8 @@ object ReadabilityUtils {
 
                 if (copyTo != null) {
                     when (elem.tagName) {
-                        "IMG", "PICTURE" -> elem.setAttribute(copyTo, attr.value)
+                        "IMG",
+                        "PICTURE" -> elem.setAttribute(copyTo, attr.value)
                         "FIGURE" -> {
                             if (getAllNodesWithTag(elem, listOf("img", "picture")).isEmpty()) {
                                 val img = p.document.createElement("img")
@@ -1032,16 +964,16 @@ object ReadabilityUtils {
             if (elementProperty != null) {
                 matches = Regexps.PROPERTY_PATTERN.find(elementProperty)
                 if (matches != null) {
-                    name =
-                        matches.groupValues
-                            .first()
-                            .lowercase()
-                            .replace("\\s".toRegex(), "")
+                    name = matches.groupValues.first().lowercase().replace("\\s".toRegex(), "")
                     values[name] = content.trim()
                 }
             }
 
-            if (matches == null && elementName != null && Regexps.NAME_PATTERN.containsMatchIn(elementName)) {
+            if (
+                matches == null &&
+                    elementName != null &&
+                    Regexps.NAME_PATTERN.containsMatchIn(elementName)
+            ) {
                 name = elementName.lowercase().replace("\\s".toRegex(), "").replace(".", ":")
                 values[name] = content.trim()
             }
@@ -1095,11 +1027,7 @@ object ReadabilityUtils {
         return metadata
     }
 
-    fun cleanConditionally(
-        e: Element,
-        tag: String,
-        p: ReadabilityProperties,
-    ) {
+    fun cleanConditionally(e: Element, tag: String, p: ReadabilityProperties) {
         if (!flagIsActive(p, FLAG_CLEAN_CONDITIONALLY)) {
             return
         }
@@ -1112,7 +1040,8 @@ object ReadabilityUtils {
             if (tag == "table" && isDataTable(element)) return@removeNodes false
             if (hasAncestorTag(element, "table", -1) { isDataTable(it) }) return@removeNodes false
             if (hasAncestorTag(element, "code")) return@removeNodes false
-            if (element.getElementsByTagName("table").any { isDataTable(it) }) return@removeNodes false
+            if (element.getElementsByTagName("table").any { isDataTable(it) })
+                return@removeNodes false
 
             val weight = getClassWeight(element, p)
             if (weight < 0) {
@@ -1123,8 +1052,9 @@ object ReadabilityUtils {
                 var isList = tag == "ul" || tag == "ol"
                 if (!isList) {
                     val listLength =
-                        getAllNodesWithTag(element, listOf("ul", "ol"))
-                            .sumOf { getInnerText(it).length }
+                        getAllNodesWithTag(element, listOf("ul", "ol")).sumOf {
+                            getInnerText(it).length
+                        }
                     val elementTextLength = getInnerText(element).length
                     if (elementTextLength > 0) {
                         isList = listLength.toDouble() / elementTextLength > 0.9
@@ -1135,7 +1065,8 @@ object ReadabilityUtils {
                 val imgCount = element.getElementsByTagName("img").size
                 val liCount = element.getElementsByTagName("li").size - 100
                 val inputCount = element.getElementsByTagName("input").size
-                val headingDensity = getTextDensity(element, listOf("h1", "h2", "h3", "h4", "h5", "h6"))
+                val headingDensity =
+                    getTextDensity(element, listOf("h1", "h2", "h3", "h4", "h5", "h6"))
                 val innerText = getInnerText(element)
 
                 var embedCount = 0
@@ -1143,14 +1074,18 @@ object ReadabilityUtils {
                 for (embed in embeds) {
                     val hasAllowedVideo =
                         embed.attributes.any { p.allowedVideoRegex.containsMatchIn(it.value) } ||
-                            (embed.tagName == "OBJECT" && p.allowedVideoRegex.containsMatchIn(embed.innerHTML))
+                            (embed.tagName == "OBJECT" &&
+                                p.allowedVideoRegex.containsMatchIn(embed.innerHTML))
                     if (hasAllowedVideo) {
                         return@removeNodes false
                     }
                     embedCount++
                 }
 
-                if (Regexps.AD_WORDS.containsMatchIn(innerText) || Regexps.LOADING_WORDS.containsMatchIn(innerText)) {
+                if (
+                    Regexps.AD_WORDS.containsMatchIn(innerText) ||
+                        Regexps.LOADING_WORDS.containsMatchIn(innerText)
+                ) {
                     return@removeNodes true
                 }
 
@@ -1160,40 +1095,53 @@ object ReadabilityUtils {
                 val textDensity = getTextDensity(element, textishTags)
                 val isFigureChild = hasAncestorTag(element, "figure")
 
-                val shouldRemove =
-                    run {
-                        val errors = mutableListOf<String>()
+                val shouldRemove = run {
+                    val errors = mutableListOf<String>()
 
-                        if (!isFigureChild && imgCount > 1 && (pCount.toDouble() / imgCount) < 0.5) {
-                            errors.add("Bad p to img ratio (img=$imgCount, p=$pCount)")
-                        }
-                        if (!isList && liCount > pCount) {
-                            errors.add("Too many li's outside of a list. (li=$liCount > p=$pCount)")
-                        }
-                        if (inputCount > (pCount / 3)) {
-                            errors.add("Too many inputs per p. (input=$inputCount, p=$pCount)")
-                        }
-                        if (!isList && !isFigureChild && headingDensity < 0.9.toBigDecimal() && contentLength < 25 &&
+                    if (!isFigureChild && imgCount > 1 && (pCount.toDouble() / imgCount) < 0.5) {
+                        errors.add("Bad p to img ratio (img=$imgCount, p=$pCount)")
+                    }
+                    if (!isList && liCount > pCount) {
+                        errors.add("Too many li's outside of a list. (li=$liCount > p=$pCount)")
+                    }
+                    if (inputCount > (pCount / 3)) {
+                        errors.add("Too many inputs per p. (input=$inputCount, p=$pCount)")
+                    }
+                    if (
+                        !isList &&
+                            !isFigureChild &&
+                            headingDensity < 0.9.toBigDecimal() &&
+                            contentLength < 25 &&
                             (imgCount == 0 || imgCount > 2) &&
                             linkDensity > BigDecimal.ZERO
-                        ) {
-                            errors.add("Suspiciously short. (headingDensity=$headingDensity, img=$imgCount, linkDensity=$linkDensity)")
-                        }
-                        if (!isList && weight < 25 && linkDensity > (0.2.toBigDecimal() + p.linkDensityModifier)) {
-                            errors.add("Low weight and a little linky. (linkDensity=$linkDensity)")
-                        }
-                        if (weight >= 25 && linkDensity > (0.5.toBigDecimal() + p.linkDensityModifier)) {
-                            errors.add("High weight and mostly links. (linkDensity=$linkDensity)")
-                        }
-                        if ((embedCount == 1 && contentLength < 75) || embedCount > 1) {
-                            errors.add("Suspicious embed. (embedCount=$embedCount, contentLength=$contentLength)")
-                        }
-                        if (imgCount == 0 && textDensity == BigDecimal.ZERO) {
-                            errors.add("No useful content. (img=0, textDensity=$textDensity)")
-                        }
-
-                        errors.isNotEmpty()
+                    ) {
+                        errors.add(
+                            "Suspiciously short. (headingDensity=$headingDensity, img=$imgCount, linkDensity=$linkDensity)"
+                        )
                     }
+                    if (
+                        !isList &&
+                            weight < 25 &&
+                            linkDensity > (0.2.toBigDecimal() + p.linkDensityModifier)
+                    ) {
+                        errors.add("Low weight and a little linky. (linkDensity=$linkDensity)")
+                    }
+                    if (
+                        weight >= 25 && linkDensity > (0.5.toBigDecimal() + p.linkDensityModifier)
+                    ) {
+                        errors.add("High weight and mostly links. (linkDensity=$linkDensity)")
+                    }
+                    if ((embedCount == 1 && contentLength < 75) || embedCount > 1) {
+                        errors.add(
+                            "Suspicious embed. (embedCount=$embedCount, contentLength=$contentLength)"
+                        )
+                    }
+                    if (imgCount == 0 && textDensity == BigDecimal.ZERO) {
+                        errors.add("No useful content. (img=0, textDensity=$textDensity)")
+                    }
+
+                    errors.isNotEmpty()
+                }
 
                 if (shouldRemove && isList) {
                     val isSimpleImageList =
@@ -1211,11 +1159,10 @@ object ReadabilityUtils {
         }
     }
 
-    val json =
-        Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-        }
+    val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
 
     private val SIMILARITY_THRESHOLD = 0.75.toBigDecimal()
 
@@ -1235,25 +1182,28 @@ object ReadabilityUtils {
                 var parsed = json.parseToJsonElement(content)
 
                 if (parsed is JsonArray) {
-                    parsed = parsed.firstOrNull { element ->
-                        (element as? JsonObject)
-                            ?.get("@type")
-                            ?.jsonPrimitive
-                            ?.contentOrNull
-                            ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) } == true
-                    } ?: continue
+                    parsed =
+                        parsed.firstOrNull { element ->
+                            (element as? JsonObject)
+                                ?.get("@type")
+                                ?.jsonPrimitive
+                                ?.contentOrNull
+                                ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) } == true
+                        } ?: continue
                 }
 
                 if (parsed !is JsonObject) continue
 
                 val matches =
                     when (val context = parsed["@context"]) {
-                        is JsonPrimitive -> context.contentOrNull?.let { Regexps.SCHEMA_DOT_ORG_REGEX.containsMatchIn(it) } == true
+                        is JsonPrimitive ->
+                            context.contentOrNull?.let {
+                                Regexps.SCHEMA_DOT_ORG_REGEX.containsMatchIn(it)
+                            } == true
                         is JsonObject -> {
-                            context["@vocab"]
-                                ?.jsonPrimitive
-                                ?.contentOrNull
-                                ?.let { Regexps.SCHEMA_DOT_ORG_REGEX.containsMatchIn(it) } == true
+                            context["@vocab"]?.jsonPrimitive?.contentOrNull?.let {
+                                Regexps.SCHEMA_DOT_ORG_REGEX.containsMatchIn(it)
+                            } == true
                         }
                         else -> false
                     }
@@ -1262,22 +1212,20 @@ object ReadabilityUtils {
 
                 var finalParsed = parsed
                 if (parsed["@type"] == null && parsed["@graph"] is JsonArray) {
-                    finalParsed = (parsed["@graph"] as JsonArray)
-                        .firstOrNull { element ->
-                            val typeContentOrEmpty =
-                                element.jsonObject["@type"]
-                                    ?.jsonPrimitive
-                                    ?.contentOrNull
-                                    ?: ""
-                            Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(typeContentOrEmpty)
-                        }?.jsonObject ?: continue
+                    finalParsed =
+                        (parsed["@graph"] as JsonArray)
+                            .firstOrNull { element ->
+                                val typeContentOrEmpty =
+                                    element.jsonObject["@type"]?.jsonPrimitive?.contentOrNull ?: ""
+                                Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(typeContentOrEmpty)
+                            }
+                            ?.jsonObject ?: continue
                 }
 
                 val typeMatches =
-                    finalParsed["@type"]
-                        ?.jsonPrimitive
-                        ?.contentOrNull
-                        ?.let { Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it) } == true
+                    finalParsed["@type"]?.jsonPrimitive?.contentOrNull?.let {
+                        Regexps.JSON_LD_ARTICLE_TYPES.containsMatchIn(it)
+                    } == true
 
                 if (!typeMatches) continue
 
@@ -1314,7 +1262,8 @@ object ReadabilityUtils {
                                         ?.jsonPrimitive
                                         ?.contentOrNull
                                         ?.trim()
-                                }.filter { it.isNotEmpty() }
+                                }
+                                .filter { it.isNotEmpty() }
 
                         if (authors.isNotEmpty()) {
                             metadata["byline"] = authors.joinToString(", ")
@@ -1324,10 +1273,9 @@ object ReadabilityUtils {
                     else -> {}
                 }
 
-                finalParsed["description"]
-                    ?.jsonPrimitive
-                    ?.contentOrNull
-                    ?.let { metadata["excerpt"] = it.trim() }
+                finalParsed["description"]?.jsonPrimitive?.contentOrNull?.let {
+                    metadata["excerpt"] = it.trim()
+                }
 
                 (finalParsed["publisher"] as? JsonObject)
                     ?.jsonObject
@@ -1336,10 +1284,9 @@ object ReadabilityUtils {
                     ?.contentOrNull
                     ?.let { metadata["siteName"] = it.trim() }
 
-                finalParsed["datePublished"]
-                    ?.jsonPrimitive
-                    ?.contentOrNull
-                    ?.let { metadata["datePublished"] = it.trim() }
+                finalParsed["datePublished"]?.jsonPrimitive?.contentOrNull?.let {
+                    metadata["datePublished"] = it.trim()
+                }
             } catch (e: Exception) {
                 LOGGER.warn("Failed to parse JSON-LD: ${e.message}")
             }
@@ -1348,10 +1295,7 @@ object ReadabilityUtils {
         return metadata ?: emptyMap()
     }
 
-    fun prepArticle(
-        articleContent: Element,
-        p: ReadabilityProperties,
-    ) {
+    fun prepArticle(articleContent: Element, p: ReadabilityProperties) {
         cleanStyles(articleContent)
         markDataTables(articleContent)
         fixLazyImages(articleContent, p)
@@ -1387,7 +1331,8 @@ object ReadabilityUtils {
         replaceNodeTags(getAllNodesWithTag(articleContent, listOf("h1")), "h2")
 
         removeNodes(getAllNodesWithTag(articleContent, listOf("p"))) { paragraph ->
-            val contentElementCount = getAllNodesWithTag(paragraph, listOf("img", "embed", "object", "iframe")).size
+            val contentElementCount =
+                getAllNodesWithTag(paragraph, listOf("img", "embed", "object", "iframe")).size
             contentElementCount == 0 && getInnerText(paragraph, normalizeSpaces = false).isEmpty()
         }
 
@@ -1438,10 +1383,7 @@ object ReadabilityUtils {
         readabilityData.contentScore = score
     }
 
-    fun grabArticle(
-        page: Element? = null,
-        p: ReadabilityProperties,
-    ): Element? {
+    fun grabArticle(page: Element? = null, p: ReadabilityProperties): Element? {
         LOGGER.info("**** grabArticle ****")
         val document = p.document
         val isPaging = page != null
@@ -1475,16 +1417,18 @@ object ReadabilityUtils {
                     continue
                 }
 
-                if (node.getAttribute("aria-modal") == "true" && node.getAttribute("role") == "dialog") {
+                if (
+                    node.getAttribute("aria-modal") == "true" &&
+                        node.getAttribute("role") == "dialog"
+                ) {
                     node = removeAndGetNext(node)
                     continue
                 }
 
-                if (p.articleByline.isNullOrEmpty() && p.metadata["byline"].isNullOrEmpty() &&
-                    isValidByLine(
-                        node,
-                        matchString,
-                    )
+                if (
+                    p.articleByline.isNullOrEmpty() &&
+                        p.metadata["byline"].isNullOrEmpty() &&
+                        isValidByLine(node, matchString)
                 ) {
                     val endOfSearchMarkerNode = getNextNode(node, true)
                     var next = getNextNode(node)
@@ -1505,19 +1449,24 @@ object ReadabilityUtils {
                 }
 
                 if (shouldRemoveTitleHeader && headerDuplicatesTitle(node, p)) {
-                    LOGGER.info("Removing header: {}, {}", node.textContent.trim(), p.articleTitle?.trim())
+                    LOGGER.info(
+                        "Removing header: {}, {}",
+                        node.textContent.trim(),
+                        p.articleTitle?.trim(),
+                    )
                     shouldRemoveTitleHeader = false
                     node = removeAndGetNext(node)
                     continue
                 }
 
                 if (stripUnlikelyCandidates) {
-                    if (Regexps.UNLIKELY_CANDIDATES.containsMatchIn(matchString) &&
-                        !Regexps.OK_MAYBE_ITS_A_CANDIDATE.containsMatchIn(matchString) &&
-                        !hasAncestorTag(node, "table") &&
-                        !hasAncestorTag(node, "code") &&
-                        node.tagName != "BODY" &&
-                        node.tagName != "A"
+                    if (
+                        Regexps.UNLIKELY_CANDIDATES.containsMatchIn(matchString) &&
+                            !Regexps.OK_MAYBE_ITS_A_CANDIDATE.containsMatchIn(matchString) &&
+                            !hasAncestorTag(node, "table") &&
+                            !hasAncestorTag(node, "code") &&
+                            node.tagName != "BODY" &&
+                            node.tagName != "A"
                     ) {
                         LOGGER.info("Removing unlikely candidate - {}", matchString)
                         node = removeAndGetNext(node)
@@ -1525,14 +1474,20 @@ object ReadabilityUtils {
                     }
 
                     if (node.getAttribute("role") in UNLIKELY_ROLES) {
-                        LOGGER.info("Removing content with role {} - {}", node.getAttribute("role"), matchString)
+                        LOGGER.info(
+                            "Removing content with role {} - {}",
+                            node.getAttribute("role"),
+                            matchString,
+                        )
                         node = removeAndGetNext(node)
                         continue
                     }
                 }
 
-                if (node.tagName in setOf("DIV", "SECTION", "HEADER", "H1", "H2", "H3", "H4", "H5", "H6") &&
-                    isElementWithoutContent(node)
+                if (
+                    node.tagName in
+                        setOf("DIV", "SECTION", "HEADER", "H1", "H2", "H3", "H4", "H5", "H6") &&
+                        isElementWithoutContent(node)
                 ) {
                     node = removeAndGetNext(node)
                     continue
@@ -1577,8 +1532,9 @@ object ReadabilityUtils {
                         childNode = nextSibling
                     }
 
-                    if (hasSingleTagInsideElement(node, "p") &&
-                        getLinkDensity(node) < 0.25.toBigDecimal()
+                    if (
+                        hasSingleTagInsideElement(node, "p") &&
+                            getLinkDensity(node) < 0.25.toBigDecimal()
                     ) {
                         val newNode = node.children[0]
                         node.parentNode?.replaceChild(newNode, node)
@@ -1616,8 +1572,11 @@ object ReadabilityUtils {
                 contentScore += minOf(innerText.length / 100, 3)
 
                 ancestors.forEachIndexed { level, ancestor ->
-                    if (ancestor !is Element || ancestor.tagName.isEmpty() || ancestor.parentNode == null ||
-                        (ancestor.parentNode as? Element)?.tagName.isNullOrBlank()
+                    if (
+                        ancestor !is Element ||
+                            ancestor.tagName.isEmpty() ||
+                            ancestor.parentNode == null ||
+                            (ancestor.parentNode as? Element)?.tagName.isNullOrBlank()
                     ) {
                         return@forEachIndexed
                     }
@@ -1642,7 +1601,8 @@ object ReadabilityUtils {
             val topCandidates = mutableListOf<Element>()
 
             candidates.forEach { candidate ->
-                val candidateScore = candidate.getContentScore() * (1 - getLinkDensity(candidate).toDouble())
+                val candidateScore =
+                    candidate.getContentScore() * (1 - getLinkDensity(candidate).toDouble())
                 candidate.setContentScore(candidateScore)
 
                 LOGGER.info("Candidate: {} with score {}", candidate, candidateScore)
@@ -1745,9 +1705,10 @@ object ReadabilityUtils {
                 }
 
                 parentOfTopCandidate = topCandidate?.parentNode as? Element
-                while (parentOfTopCandidate != null &&
-                    parentOfTopCandidate.tagName != "BODY" &&
-                    parentOfTopCandidate.children.size == 1
+                while (
+                    parentOfTopCandidate != null &&
+                        parentOfTopCandidate.tagName != "BODY" &&
+                        parentOfTopCandidate.children.size == 1
                 ) {
                     topCandidate = parentOfTopCandidate
                     parentOfTopCandidate = topCandidate.parentNode as? Element
@@ -1763,11 +1724,7 @@ object ReadabilityUtils {
                 articleContent.id = "readability-content"
             }
 
-            val siblingScoreThreshold =
-                maxOf(
-                    10.0,
-                    (topCandidate?.getContentScore() ?: 0.0) * 0.2,
-                )
+            val siblingScoreThreshold = maxOf(10.0, (topCandidate?.getContentScore() ?: 0.0) * 0.2)
             parentOfTopCandidate = topCandidate?.parentNode as? Element
 
             val siblings = parentOfTopCandidate?.children?.toList() ?: emptyList()
@@ -1784,11 +1741,17 @@ object ReadabilityUtils {
                 } else {
                     var contentBonus = 0.0
 
-                    if (sibling.className == topCandidate?.className && topCandidate.className.isNotEmpty()) {
+                    if (
+                        sibling.className == topCandidate?.className &&
+                            topCandidate.className.isNotEmpty()
+                    ) {
                         contentBonus += topCandidate.getContentScore() * 0.2
                     }
 
-                    if (sibling.hasContentScore() && sibling.getContentScore() + contentBonus >= siblingScoreThreshold) {
+                    if (
+                        sibling.hasContentScore() &&
+                            sibling.getContentScore() + contentBonus >= siblingScoreThreshold
+                    ) {
                         append = true
                     } else if (sibling.tagName == "P") {
                         val linkDensity = getLinkDensity(sibling)
@@ -1797,8 +1760,10 @@ object ReadabilityUtils {
 
                         if (nodeLength > 80 && linkDensity < 0.25.toBigDecimal()) {
                             append = true
-                        } else if (nodeLength in 1..<80 && linkDensity == BigDecimal.ZERO &&
-                            Regex("""\.\s|\.$""").containsMatchIn(nodeContent)
+                        } else if (
+                            nodeLength in 1..<80 &&
+                                linkDensity == BigDecimal.ZERO &&
+                                Regex("""\.\s|\.$""").containsMatchIn(nodeContent)
                         ) {
                             append = true
                         }

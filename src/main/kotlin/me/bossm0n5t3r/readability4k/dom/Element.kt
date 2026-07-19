@@ -1,8 +1,6 @@
 package me.bossm0n5t3r.readability4k.dom
 
-class Element(
-    tag: String,
-) : Node() {
+class Element(tag: String) : Node() {
     override val nodeType = NodeType.ELEMENT_NODE
 
     val matchingTag: String = tag
@@ -64,14 +62,12 @@ class Element(
         return className in classes
     }
 
-    fun querySelectorAll(selector: String): List<Element> = NodeUtils.querySelectorAll(this, selector)
+    fun querySelectorAll(selector: String): List<Element> =
+        NodeUtils.querySelectorAll(this, selector)
 
     fun getAttribute(name: String): String? = attributes.findLast { it.name == name }?.value
 
-    fun setAttribute(
-        name: String,
-        value: String,
-    ) {
+    fun setAttribute(name: String, value: String) {
         val existing = attributes.findLast { it.name == name }
         if (existing != null) {
             existing.value = value

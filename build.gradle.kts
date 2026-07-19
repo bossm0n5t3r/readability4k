@@ -6,11 +6,10 @@ plugins {
 }
 
 group = "me.bossm0n5t3r"
+
 version = "1.0-SNAPSHOT"
 
-repositories {
-    mavenCentral()
-}
+repositories { mavenCentral() }
 
 dependencies {
     implementation(libs.jsoup)
@@ -22,18 +21,8 @@ dependencies {
     testImplementation(libs.mockk)
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
+tasks.test { useJUnitPlatform() }
 
-kotlin {
-    jvmToolchain(
-        libs.versions.jdk.version
-            .get()
-            .toInt(),
-    )
-}
+kotlin { jvmToolchain(libs.versions.jdk.version.get().toInt()) }
 
-ktfmt {
-    kotlinLangStyle()
-}
+ktfmt { kotlinLangStyle() }

@@ -2,10 +2,10 @@
 
 package me.bossm0n5t3r.readability4k
 
-import me.bossm0n5t3r.readability4k.dom.Document
-import me.bossm0n5t3r.readability4k.dom.Element
 import java.math.BigDecimal
 import kotlin.math.sqrt
+import me.bossm0n5t3r.readability4k.dom.Document
+import me.bossm0n5t3r.readability4k.dom.Element
 
 /**
  * Checks if a DOM node is visible.
@@ -45,12 +45,10 @@ fun isNodeVisible(node: Element): Boolean {
  *
  * @param doc The document to analyze.
  * @param options Configuration object with options for readability detection.
- * @return Whether or not we suspect Readability.parse() will succeed at returning an article object.
+ * @return Whether or not we suspect Readability.parse() will succeed at returning an article
+ *   object.
  */
-fun isProbablyReaderable(
-    doc: Document,
-    options: ReaderableOptions = ReaderableOptions(),
-): Boolean {
+fun isProbablyReaderable(doc: Document, options: ReaderableOptions = ReaderableOptions()): Boolean {
     val nodes = doc.querySelectorAll("p, pre, article")
 
     // Get <div> nodes which have <br> node(s) and append them into the nodes collection.
@@ -73,8 +71,9 @@ fun isProbablyReaderable(
         }
 
         val matchString = "${node.className} ${node.id}"
-        if (Regexps.UNLIKELY_CANDIDATES.containsMatchIn(matchString) &&
-            !Regexps.OK_MAYBE_ITS_A_CANDIDATE.containsMatchIn(matchString)
+        if (
+            Regexps.UNLIKELY_CANDIDATES.containsMatchIn(matchString) &&
+                !Regexps.OK_MAYBE_ITS_A_CANDIDATE.containsMatchIn(matchString)
         ) {
             return@any false
         }
@@ -94,10 +93,7 @@ fun isProbablyReaderable(
     }
 }
 
-fun isProbablyReaderable(
-    doc: Document,
-    visibilityChecker: (Element) -> Boolean,
-): Boolean {
+fun isProbablyReaderable(doc: Document, visibilityChecker: (Element) -> Boolean): Boolean {
     val options = ReaderableOptions(visibilityChecker = visibilityChecker)
     return isProbablyReaderable(doc, options)
 }

@@ -1,9 +1,9 @@
 package me.bossm0n5t3r.readability4k
 
+import java.math.BigDecimal
 import me.bossm0n5t3r.readability4k.dom.Element
 import me.bossm0n5t3r.readability4k.dom.Node
 import me.bossm0n5t3r.readability4k.dom.TextNode
-import java.math.BigDecimal
 
 data class ReadabilityOptions(
     val debug: Boolean = false,

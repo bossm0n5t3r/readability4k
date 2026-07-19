@@ -1,8 +1,6 @@
 package me.bossm0n5t3r.readability4k.dom
 
-class Style(
-    private val node: Element,
-) {
+class Style(private val node: Element) {
     companion object {
         private val STYLE_MAP =
             mapOf(
@@ -210,10 +208,7 @@ class Style(
         return null
     }
 
-    fun setStyle(
-        styleName: String,
-        styleValue: String,
-    ) {
+    fun setStyle(styleName: String, styleValue: String) {
         var value = node.getAttribute("style") ?: ""
         var index = 0
 
@@ -223,8 +218,9 @@ class Style(
             val style = value.substring(index, index + length)
 
             if (style.substringBefore(":").trim() == styleName) {
-                value = value.take(index).trim() +
-                    if (next > 0) " " + value.substring(next).trim() else ""
+                value =
+                    value.take(index).trim() +
+                        if (next > 0) " " + value.substring(next).trim() else ""
                 break
             }
             index = next
@@ -239,10 +235,7 @@ class Style(
         return getStyle(cssName)
     }
 
-    operator fun set(
-        property: String,
-        value: String,
-    ) {
+    operator fun set(property: String, value: String) {
         val cssName = STYLE_MAP[property] ?: property
         setStyle(cssName, value)
     }

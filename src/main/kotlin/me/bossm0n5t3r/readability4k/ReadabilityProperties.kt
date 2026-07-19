@@ -1,9 +1,9 @@
 package me.bossm0n5t3r.readability4k
 
+import java.math.BigDecimal
 import me.bossm0n5t3r.readability4k.dom.Document
 import me.bossm0n5t3r.readability4k.dom.Element
 import me.bossm0n5t3r.readability4k.dom.Node
-import java.math.BigDecimal
 
 data class ReadabilityProperties(
     val document: Document,
@@ -26,7 +26,10 @@ data class ReadabilityProperties(
     val linkDensityModifier: BigDecimal,
     var flags: Int,
 ) {
-    constructor(document: Document, options: ReadabilityOptions) : this(
+    constructor(
+        document: Document,
+        options: ReadabilityOptions,
+    ) : this(
         document = document,
         articleTitle = null,
         articleByline = null,
@@ -48,8 +51,5 @@ data class ReadabilityProperties(
         flags = FLAG_STRIP_UNLIKELYS or FLAG_WEIGHT_CLASSES or FLAG_CLEAN_CONDITIONALLY,
     )
 
-    data class Attempt(
-        val articleContent: Element,
-        val textLength: Int,
-    )
+    data class Attempt(val articleContent: Element, val textLength: Int)
 }

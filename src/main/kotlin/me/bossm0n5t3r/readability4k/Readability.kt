@@ -9,10 +9,7 @@ import me.bossm0n5t3r.readability4k.ReadabilityUtils.removeScripts
 import me.bossm0n5t3r.readability4k.ReadabilityUtils.unwrapNoscriptImages
 import me.bossm0n5t3r.readability4k.dom.Document
 
-class Readability(
-    doc: Document,
-    options: ReadabilityOptions = ReadabilityOptions(),
-) {
+class Readability(doc: Document, options: ReadabilityOptions = ReadabilityOptions()) {
     val p = ReadabilityProperties(doc, options)
 
     fun parse(): ReadabilityResult? {
@@ -40,11 +37,7 @@ class Readability(
 
         if (p.metadata["excerpt"].isNullOrBlank()) {
             val excerpt =
-                articleContent
-                    .getElementsByTagName("p")
-                    .firstOrNull()
-                    ?.textContent
-                    ?.trim()
+                articleContent.getElementsByTagName("p").firstOrNull()?.textContent?.trim()
             if (excerpt != null) {
                 p.metadata["excerpt"] = excerpt
             }

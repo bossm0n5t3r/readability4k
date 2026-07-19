@@ -1,8 +1,8 @@
 package me.bossm0n5t3r.readability4k
 
 /**
- * Regular expressions used throughout the Readability implementation.
- * All regex patterns from the original JavaScript implementation.
+ * Regular expressions used throughout the Readability implementation. All regex patterns from the
+ * original JavaScript implementation.
  */
 object Regexps {
     // Main content detection patterns
@@ -13,10 +13,7 @@ object Regexps {
         )
 
     val OK_MAYBE_ITS_A_CANDIDATE =
-        Regex(
-            "and|article|body|column|content|main|mathjax|shadow",
-            RegexOption.IGNORE_CASE,
-        )
+        Regex("and|article|body|column|content|main|mathjax|shadow", RegexOption.IGNORE_CASE)
 
     val POSITIVE =
         Regex(
@@ -36,18 +33,11 @@ object Regexps {
             RegexOption.IGNORE_CASE,
         )
 
-    val BYLINE =
-        Regex(
-            "byline|author|dateline|writtenby|p-author",
-            RegexOption.IGNORE_CASE,
-        )
+    val BYLINE = Regex("byline|author|dateline|writtenby|p-author", RegexOption.IGNORE_CASE)
 
     // Text processing patterns
     val REPLACE_FONTS =
-        Regex(
-            "<(/?)font[^>]*>",
-            setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE),
-        )
+        Regex("<(/?)font[^>]*>", setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE))
 
     val NORMALIZE = Regex("\\s{2,}")
 
@@ -59,24 +49,12 @@ object Regexps {
         )
 
     // Navigation patterns
-    val NEXT_LINK =
-        Regex(
-            "(next|weiter|continue|>([^|]|$)|»([^|]|$))",
-            RegexOption.IGNORE_CASE,
-        )
+    val NEXT_LINK = Regex("(next|weiter|continue|>([^|]|$)|»([^|]|$))", RegexOption.IGNORE_CASE)
 
-    val PREV_LINK =
-        Regex(
-            "(prev|earl|old|new|<|«)",
-            RegexOption.IGNORE_CASE,
-        )
+    val PREV_LINK = Regex("(prev|earl|old|new|<|«)", RegexOption.IGNORE_CASE)
 
     // Content analysis patterns
-    val SHARE_ELEMENTS =
-        Regex(
-            "(\\b|_)(share|sharedaddy)(\\b|_)",
-            RegexOption.IGNORE_CASE,
-        )
+    val SHARE_ELEMENTS = Regex("(\\b|_)(share|sharedaddy)(\\b|_)", RegexOption.IGNORE_CASE)
 
     val TOKENIZE = Regex("\\W+")
 
@@ -88,11 +66,7 @@ object Regexps {
 
     val SRCSET_URL = Regex("(\\S+)(\\s+[\\d.]+[xw])?(\\s*(?:,|$))")
 
-    val B64_DATA_URL =
-        Regex(
-            "^data:\\s*([^\\s;,]+)\\s*;\\s*base64\\s*,",
-            RegexOption.IGNORE_CASE,
-        )
+    val B64_DATA_URL = Regex("^data:\\s*([^\\s;,]+)\\s*;\\s*base64\\s*,", RegexOption.IGNORE_CASE)
 
     // Commas as used in Latin, Sindhi, Chinese and various other scripts.
     // see: https://en.wikipedia.org/wiki/Comma#Comma_variants
@@ -101,7 +75,7 @@ object Regexps {
     // See: https://schema.org/Article
     val JSON_LD_ARTICLE_TYPES =
         Regex(
-            "^Article|AdvertiserContentArticle|NewsArticle|AnalysisNewsArticle|AskPublicNewsArticle|BackgroundNewsArticle|OpinionNewsArticle|ReportageNewsArticle|ReviewNewsArticle|Report|SatiricalArticle|ScholarlyArticle|MedicalScholarlyArticle|SocialMediaPosting|BlogPosting|LiveBlogPosting|DiscussionForumPosting|TechArticle|APIReference$",
+            "^Article|AdvertiserContentArticle|NewsArticle|AnalysisNewsArticle|AskPublicNewsArticle|BackgroundNewsArticle|OpinionNewsArticle|ReportageNewsArticle|ReviewNewsArticle|Report|SatiricalArticle|ScholarlyArticle|MedicalScholarlyArticle|SocialMediaPosting|BlogPosting|LiveBlogPosting|DiscussionForumPosting|TechArticle|APIReference$"
         )
 
     // Content filtering patterns

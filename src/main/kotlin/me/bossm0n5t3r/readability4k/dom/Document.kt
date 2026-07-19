@@ -2,9 +2,7 @@ package me.bossm0n5t3r.readability4k.dom
 
 import java.net.URI
 
-class Document(
-    val documentURI: String,
-) : Node() {
+class Document(val documentURI: String) : Node() {
     override val nodeType = NodeType.DOCUMENT_NODE
     override val nodeName = "#document"
 
@@ -24,20 +22,19 @@ class Document(
     private var _baseURI: String? = null
     val baseURI: String
         get() {
-            _baseURI?.let { return it }
+            _baseURI?.let {
+                return it
+            }
 
             var result = documentURI
 
-            getElementsByTagName("base")
-                .firstOrNull()
-                ?.getAttribute("href")
-                ?.let { href ->
-                    try {
-                        result = URI(result).resolve(href).toString()
-                    } catch (e: Exception) {
-                        // Just fall back to documentURI
-                    }
+            getElementsByTagName("base").firstOrNull()?.getAttribute("href")?.let { href ->
+                try {
+                    result = URI(result).resolve(href).toString()
+                } catch (e: Exception) {
+                    // Just fall back to documentURI
                 }
+            }
 
             _baseURI = result
             return result
@@ -45,7 +42,8 @@ class Document(
 
     fun getElementsByTagName(tag: String): List<Element> = NodeUtils.getElementsByTagName(this, tag)
 
-    fun querySelectorAll(selector: String): List<Element> = NodeUtils.querySelectorAll(this, selector)
+    fun querySelectorAll(selector: String): List<Element> =
+        NodeUtils.querySelectorAll(this, selector)
 
     fun getElementById(id: String): Element? {
         fun getElem(node: Node): Element? {
@@ -63,10 +61,7 @@ class Document(
 
     fun createElement(tag: String): Element = Element(tag)
 
-    fun createTextNode(text: String): TextNode =
-        TextNode().apply {
-            textContent = text
-        }
+    fun createTextNode(text: String): TextNode = TextNode().apply { textContent = text }
 
     fun createDocumentFragment(): DocumentFragment = DocumentFragment()
 }

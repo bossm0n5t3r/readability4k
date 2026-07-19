@@ -1,9 +1,5 @@
 package me.bossm0n5t3r.readability4k
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.jsonObject
-import org.jsoup.Jsoup
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.div
@@ -11,6 +7,10 @@ import kotlin.io.path.isDirectory
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 import kotlin.io.path.readText
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonObject
+import org.jsoup.Jsoup
 
 object Utils {
     private fun readFile(filePath: Path): String = filePath.readText().trim()
@@ -36,13 +36,13 @@ object Utils {
             }
 
     fun prettyPrint(html: String): String =
-        Jsoup
-            .parseBodyFragment(html)
+        Jsoup.parseBodyFragment(html)
             .apply {
                 outputSettings().apply {
                     indentAmount(4)
                     prettyPrint(true)
                 }
-            }.body()
+            }
+            .body()
             .html()
 }

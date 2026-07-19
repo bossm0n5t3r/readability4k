@@ -16,7 +16,9 @@ class IsProbablyReaderableTest :
             testPages.forEach {
                 describe(it.dir) {
                     val expected = it.expectedMetadata[READERABLE]?.jsonPrimitive?.boolean
-                    requireNotNull(expected) { "Expected $READERABLE metadata property in test page" }
+                    requireNotNull(expected) {
+                        "Expected $READERABLE metadata property in test page"
+                    }
                     val document = DOMParser().parse(it.source)
                     val result = isProbablyReaderable(document)
                     it("The result should ${if (expected) "" else "not "}be readerable") {
@@ -36,7 +38,8 @@ class IsProbablyReaderableTest :
             // content length: 144
             val largeDoc = makeDoc("<html><p id=\"main\">${"hello there ".repeat(12)}</p></html>")
             // content length: 600
-            val veryLargeDoc = makeDoc("<html><p id=\"main\">${"hello there ".repeat(50)}</p></html>")
+            val veryLargeDoc =
+                makeDoc("<html><p id=\"main\">${"hello there ".repeat(50)}</p></html>")
 
             it("should only declare large documents as readerable when default options") {
                 isProbablyReaderable(verySmallDoc) shouldBe false // score: 0
@@ -45,7 +48,9 @@ class IsProbablyReaderableTest :
                 isProbablyReaderable(veryLargeDoc) shouldBe true // score: ~21.4
             }
 
-            it("should declare small and large documents as readerable when lower minContentLength") {
+            it(
+                "should declare small and large documents as readerable when lower minContentLength"
+            ) {
                 val options = ReaderableOptions(minContentLength = 120, minScore = 0.toBigDecimal())
                 isProbablyReaderable(verySmallDoc, options) shouldBe false
                 isProbablyReaderable(smallDoc, options) shouldBe true
@@ -70,7 +75,8 @@ class IsProbablyReaderableTest :
             }
 
             it("should declare large documents as readerable when higher minScore") {
-                val options = ReaderableOptions(minContentLength = 0, minScore = 11.5.toBigDecimal())
+                val options =
+                    ReaderableOptions(minContentLength = 0, minScore = 11.5.toBigDecimal())
                 isProbablyReaderable(verySmallDoc, options) shouldBe false // score: ~3.3
                 isProbablyReaderable(smallDoc, options) shouldBe false // score: ~11.4
                 isProbablyReaderable(largeDoc, options) shouldBe true // score: ~11.9
@@ -80,10 +86,12 @@ class IsProbablyReaderableTest :
             it("should use node visibility checker provided as option - not visible") {
                 var called = false
                 val options =
-                    ReaderableOptions(visibilityChecker = {
-                        called = true
-                        false
-                    })
+                    ReaderableOptions(
+                        visibilityChecker = {
+                            called = true
+                            false
+                        }
+                    )
                 isProbablyReaderable(veryLargeDoc, options) shouldBe false
                 called shouldBe true
             }
@@ -91,10 +99,12 @@ class IsProbablyReaderableTest :
             it("should use node visibility checker provided as option - visible") {
                 var called = false
                 val options =
-                    ReaderableOptions(visibilityChecker = {
-                        called = true
-                        true
-                    })
+                    ReaderableOptions(
+                        visibilityChecker = {
+                            called = true
+                            true
+                        }
+                    )
                 isProbablyReaderable(veryLargeDoc, options) shouldBe true
                 called shouldBe true
             }

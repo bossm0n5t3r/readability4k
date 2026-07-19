@@ -25,10 +25,7 @@ object NodeUtils {
             }
         }
 
-    fun getElementsByTagName(
-        root: Node,
-        tag: String,
-    ): List<Element> {
+    fun getElementsByTagName(root: Node, tag: String): List<Element> {
         val upperTag = tag.uppercase()
         val elems = mutableListOf<Element>()
         val allTags = tag == "*"
@@ -48,10 +45,7 @@ object NodeUtils {
         return elems
     }
 
-    fun querySelectorAll(
-        root: Node,
-        selector: String,
-    ): List<Element> {
+    fun querySelectorAll(root: Node, selector: String): List<Element> {
         val selectorGroups = selector.split(",").map { it.trim() }
         val results = mutableSetOf<Element>()
 
@@ -62,10 +56,7 @@ object NodeUtils {
         return results.toList()
     }
 
-    private fun querySelectorSingle(
-        root: Node,
-        selector: String,
-    ): List<Element> {
+    private fun querySelectorSingle(root: Node, selector: String): List<Element> {
         val parts = parseCombinators(selector)
 
         if (parts.size == 1 && parts[0].combinator == null) {
@@ -92,13 +83,18 @@ object NodeUtils {
                     while (i < selector.length && selector[i].isWhitespace()) i++
                     continue
                 }
-                ' ', '\t', '\n', '\r' -> {
+                ' ',
+                '\t',
+                '\n',
+                '\r' -> {
                     if (current.isNotBlank()) {
                         var j = i
                         while (j < selector.length && selector[j].isWhitespace()) j++
 
                         if (j < selector.length && selector[j] != '>') {
-                            parts.add(SelectorPart(current.toString().trim(), Combinator.DESCENDANT))
+                            parts.add(
+                                SelectorPart(current.toString().trim(), Combinator.DESCENDANT)
+                            )
                             current = StringBuilder()
                         }
                     }
@@ -119,10 +115,7 @@ object NodeUtils {
         return parts
     }
 
-    private fun findAllMatching(
-        root: Node,
-        selector: SimpleSelector,
-    ): List<Element> {
+    private fun findAllMatching(root: Node, selector: SimpleSelector): List<Element> {
         val elems = mutableListOf<Element>()
 
         fun traverse(node: Node) {
@@ -140,10 +133,7 @@ object NodeUtils {
         return elems
     }
 
-    private fun findWithCombinators(
-        root: Node,
-        parts: List<SelectorPart>,
-    ): List<Element> {
+    private fun findWithCombinators(root: Node, parts: List<SelectorPart>): List<Element> {
         if (parts.isEmpty()) return emptyList()
 
         var candidates = findAllMatching(root, parseSimpleSelector(parts[0].selector))
@@ -208,23 +198,18 @@ object NodeUtils {
         }
     }
 
-    private fun matches(
-        element: Element,
-        selector: SimpleSelector,
-    ): Boolean =
+    private fun matches(element: Element, selector: SimpleSelector): Boolean =
         when (selector) {
             is SimpleSelector.All -> true
             is SimpleSelector.Tag -> element.tagName == selector.name.uppercase()
             is SimpleSelector.Id -> element.id == selector.id
             is SimpleSelector.Class -> element.hasClass(selector.className)
             is SimpleSelector.Attribute -> element.hasAttribute(selector.name)
-            is SimpleSelector.AttributeWithValue -> element.getAttribute(selector.name) == selector.value
+            is SimpleSelector.AttributeWithValue ->
+                element.getAttribute(selector.name) == selector.value
         }
 
-    private data class SelectorPart(
-        val selector: String,
-        var combinator: Combinator?,
-    )
+    private data class SelectorPart(val selector: String, var combinator: Combinator?)
 
     private enum class Combinator {
         CHILD, // >
@@ -234,25 +219,14 @@ object NodeUtils {
     private sealed class SimpleSelector {
         object All : SimpleSelector()
 
-        data class Tag(
-            val name: String,
-        ) : SimpleSelector()
+        data class Tag(val name: String) : SimpleSelector()
 
-        data class Id(
-            val id: String,
-        ) : SimpleSelector()
+        data class Id(val id: String) : SimpleSelector()
 
-        data class Class(
-            val className: String,
-        ) : SimpleSelector()
+        data class Class(val className: String) : SimpleSelector()
 
-        data class Attribute(
-            val name: String,
-        ) : SimpleSelector()
+        data class Attribute(val name: String) : SimpleSelector()
 
-        data class AttributeWithValue(
-            val name: String,
-            val value: String,
-        ) : SimpleSelector()
+        data class AttributeWithValue(val name: String, val value: String) : SimpleSelector()
     }
 }

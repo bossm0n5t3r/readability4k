@@ -35,40 +35,47 @@ class ReadabilityTest :
 
                 it("should accept a nbTopCandidates option") {
                     Readability(doc).p.nbTopCandidates shouldBe 5
-                    Readability(doc, ReadabilityOptions(nbTopCandidates = 42)).p.nbTopCandidates shouldBe 42
+                    Readability(doc, ReadabilityOptions(nbTopCandidates = 42))
+                        .p
+                        .nbTopCandidates shouldBe 42
                 }
 
                 it("should accept a maxElemsToParse option") {
                     Readability(doc).p.maxElemsToParse shouldBe 0
-                    Readability(doc, ReadabilityOptions(maxElemsToParse = 42)).p.maxElemsToParse shouldBe 42
+                    Readability(doc, ReadabilityOptions(maxElemsToParse = 42))
+                        .p
+                        .maxElemsToParse shouldBe 42
                 }
 
                 it("should accept a keepClasses option") {
                     Readability(doc).p.keepClasses shouldBe false
-                    Readability(doc, ReadabilityOptions(keepClasses = true)).p.keepClasses shouldBe true
-                    Readability(doc, ReadabilityOptions(keepClasses = false)).p.keepClasses shouldBe false
+                    Readability(doc, ReadabilityOptions(keepClasses = true)).p.keepClasses shouldBe
+                        true
+                    Readability(doc, ReadabilityOptions(keepClasses = false)).p.keepClasses shouldBe
+                        false
                 }
 
                 it("should accept a allowedVideoRegex option or default it") {
                     Readability(doc).p.allowedVideoRegex.pattern shouldBe Regexps.VIDEOS.pattern
                     val customRegex = Regex("""//mydomain\.com/.*'""")
                     Readability(doc, ReadabilityOptions(allowedVideoRegex = customRegex))
-                        .p.allowedVideoRegex.pattern shouldBe customRegex.pattern
+                        .p
+                        .allowedVideoRegex
+                        .pattern shouldBe customRegex.pattern
                 }
             }
 
             describe("#parse") {
                 val exampleSource = Utils.getTestPages().first().source
 
-                afterTest {
-                    unmockkObject(ReadabilityUtils)
-                }
+                afterTest { unmockkObject(ReadabilityUtils) }
 
                 it("shouldn't parse oversized documents as per configuration") {
                     val doc = DOMParser().parse("<html><div>yo</div></html>")
                     shouldThrow<IllegalArgumentException> {
-                        Readability(doc, ReadabilityOptions(maxElemsToParse = 1)).parse()
-                    }.message shouldBe "Aborting parsing document; 2 elements found"
+                            Readability(doc, ReadabilityOptions(maxElemsToParse = 1)).parse()
+                        }
+                        .message shouldBe "Aborting parsing document; 2 elements found"
                 }
 
                 it("should run cleanClasses with default configuration") {
@@ -110,11 +117,13 @@ class ReadabilityTest :
                         """<div xmlns="http://www.w3.org/1999/xhtml" id="readability-page-1" class="page">My cat: <img src="" /></div>"""
                     val content =
                         Readability(
-                            doc,
-                            ReadabilityOptions(
-                                serializer = { el -> el.firstChild?.textContent.orEmpty() },
-                            ),
-                        ).parse()?.content
+                                doc,
+                                ReadabilityOptions(
+                                    serializer = { el -> el.firstChild?.textContent.orEmpty() }
+                                ),
+                            )
+                            .parse()
+                            ?.content
                     content shouldBe expectedXhtml
                 }
 
@@ -131,12 +140,14 @@ class ReadabilityTest :
                             """</div>"""
                     val content =
                         Readability(
-                            doc,
-                            ReadabilityOptions(
-                                charThreshold = 20,
-                                allowedVideoRegex = Regex(""".*mycustomdomain.com.*"""),
-                            ),
-                        ).parse()?.content
+                                doc,
+                                ReadabilityOptions(
+                                    charThreshold = 20,
+                                    allowedVideoRegex = Regex(""".*mycustomdomain.com.*"""),
+                                ),
+                            )
+                            .parse()
+                            ?.content
                     content shouldBe expectedXhtml
                 }
             }
@@ -160,7 +171,11 @@ class ReadabilityTest :
                             if (parser.errorState.isNotBlank()) {
                                 error("Parsing this DOM caused errors: ${parser.errorState}")
                             }
-                            val reader = Readability(doc, ReadabilityOptions(classesToPreserve = listOf("caption")))
+                            val reader =
+                                Readability(
+                                    doc,
+                                    ReadabilityOptions(classesToPreserve = listOf("caption")),
+                                )
                             result = reader.parse() ?: error("Readability.parse() returned null")
                         }
 
@@ -200,7 +215,8 @@ class ReadabilityTest :
                                         val actualElement = actualNode as Element
                                         val expectedElement = expectedNode as Element
                                         val actualNodeAttributes = attributesForNode(actualElement)
-                                        val expectedNodeAttributes = attributesForNode(expectedElement)
+                                        val expectedNodeAttributes =
+                                            attributesForNode(expectedElement)
 
                                         val desc =
                                             "node ${nodeStr(actualElement)} attributes " +
@@ -208,7 +224,8 @@ class ReadabilityTest :
                                                 "(${expectedNodeAttributes.joinToString(",")}) 1"
 
                                         withClue(desc) {
-                                            actualNodeAttributes.size shouldBe expectedNodeAttributes.size
+                                            actualNodeAttributes.size shouldBe
+                                                expectedNodeAttributes.size
                                         }
 
                                         for (i in actualNodeAttributes.indices) {
@@ -216,7 +233,9 @@ class ReadabilityTest :
                                             val actualValue = actualElement.getAttribute(attr)
                                             val expectedValue = expectedElement.getAttribute(attr)
 
-                                            withClue("node (${findableNodeDesc(actualNode)}) attribute $attr should match") {
+                                            withClue(
+                                                "node (${findableNodeDesc(actualNode)}) attribute $attr should match"
+                                            ) {
                                                 actualValue shouldBe expectedValue
                                             }
                                         }
@@ -263,23 +282,30 @@ class ReadabilityTest :
                                     ?.content
                         }
 
-                        testPage.expectedMetadata["dir"]?.takeIf { it != JsonNull }?.let { expectedDir ->
-                            it("should extract expected direction") {
-                                result.dir shouldBe expectedDir.jsonPrimitive.content
+                        testPage.expectedMetadata["dir"]
+                            ?.takeIf { it != JsonNull }
+                            ?.let { expectedDir ->
+                                it("should extract expected direction") {
+                                    result.dir shouldBe expectedDir.jsonPrimitive.content
+                                }
                             }
-                        }
 
-                        testPage.expectedMetadata["lang"]?.takeIf { it != JsonNull }?.let { expectedLang ->
-                            it("should extract expected language") {
-                                result.lang shouldBe expectedLang.jsonPrimitive.content
+                        testPage.expectedMetadata["lang"]
+                            ?.takeIf { it != JsonNull }
+                            ?.let { expectedLang ->
+                                it("should extract expected language") {
+                                    result.lang shouldBe expectedLang.jsonPrimitive.content
+                                }
                             }
-                        }
 
-                        testPage.expectedMetadata["publishedTime"]?.takeIf { it != JsonNull }?.let { publishedTime ->
-                            it("should extract expected published time") {
-                                result.publishedTime shouldBe publishedTime.jsonPrimitive.content
+                        testPage.expectedMetadata["publishedTime"]
+                            ?.takeIf { it != JsonNull }
+                            ?.let { publishedTime ->
+                                it("should extract expected published time") {
+                                    result.publishedTime shouldBe
+                                        publishedTime.jsonPrimitive.content
+                                }
                             }
-                        }
                     }
                 }
             }
@@ -312,9 +338,11 @@ class ReadabilityTest :
             return "$parentPath > ${nodeStr(node)}:nth-child($index)"
         }
 
-        private fun findableNodeDesc(node: Node) = "${genPath(node)}(in: ``${node.parentNode?.innerHTMLOrNull}``)"
+        private fun findableNodeDesc(node: Node) =
+            "${genPath(node)}(in: ``${node.parentNode?.innerHTMLOrNull}``)"
 
-        private fun attributesForNode(node: Node): List<Attribute> = (node as? Element)?.attributes.orEmpty()
+        private fun attributesForNode(node: Node): List<Attribute> =
+            (node as? Element)?.attributes.orEmpty()
 
         fun inOrderTraverse(fromNode: Node?): Node? {
             if (fromNode?.firstChild != null) {
@@ -334,7 +362,11 @@ class ReadabilityTest :
 
             do {
                 node = inOrderTraverse(node)
-            } while (node != null && node.nodeType == NodeType.TEXT_NODE && node.textContent.trim().isEmpty())
+            } while (
+                node != null &&
+                    node.nodeType == NodeType.TEXT_NODE &&
+                    node.textContent.trim().isEmpty()
+            )
 
             return node
         }

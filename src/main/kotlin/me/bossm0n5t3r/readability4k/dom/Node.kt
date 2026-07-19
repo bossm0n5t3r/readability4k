@@ -45,10 +45,7 @@ abstract class Node {
         return child
     }
 
-    fun insertBefore(
-        newNode: Node,
-        referenceNode: Node?,
-    ): Node {
+    fun insertBefore(newNode: Node, referenceNode: Node?): Node {
         if (newNode === referenceNode) return newNode
 
         val nodes =
@@ -106,21 +103,17 @@ abstract class Node {
 
     fun removeChild(child: Node): Node = child.remove()
 
-    fun replaceChild(
-        newNode: Node,
-        oldNode: Node,
-    ): Node {
+    fun replaceChild(newNode: Node, oldNode: Node): Node {
         if (newNode == oldNode) return oldNode
-        require(oldNode.parentNode == this) { "replaceChild: node to be replaced is not a child of this node" }
+        require(oldNode.parentNode == this) {
+            "replaceChild: node to be replaced is not a child of this node"
+        }
         insertBefore(newNode, oldNode)
         oldNode.remove()
         return oldNode
     }
 
-    private fun insertNodesAtIndex(
-        nodes: List<Node>,
-        index: Int,
-    ) {
+    private fun insertNodesAtIndex(nodes: List<Node>, index: Int) {
         if (nodes.isEmpty()) return
 
         for (node in nodes) {

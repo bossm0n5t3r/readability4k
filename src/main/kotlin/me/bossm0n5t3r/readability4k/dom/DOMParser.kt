@@ -14,10 +14,7 @@ class DOMParser {
         private val WHITESPACE = setOf(' ', '\t', '\n', '\r')
     }
 
-    fun parse(
-        html: String,
-        url: String = "",
-    ): Document {
+    fun parse(html: String, url: String = ""): Document {
         this.html = html
         this.currentChar = 0
         this.doc = Document(url)
