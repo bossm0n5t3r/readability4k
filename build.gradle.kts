@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ktlint)
+    alias(libs.plugins.ktfmt)
     alias(libs.plugins.kotest)
 }
 
@@ -34,9 +34,6 @@ kotlin {
     )
 }
 
-ktlint {
-    version.set(
-        libs.versions.pinterest.ktlint
-            .get(),
-    )
+ktfmt {
+    kotlinLangStyle()
 }
