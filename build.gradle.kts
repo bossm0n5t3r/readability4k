@@ -26,3 +26,12 @@ tasks.test { useJUnitPlatform() }
 kotlin { jvmToolchain(libs.versions.jdk.version.get().toInt()) }
 
 ktfmt { kotlinLangStyle() }
+
+tasks.register<Copy>("copyTestPages") {
+    group = "test"
+    description = "Copy readability test page fixtures into src/test/resources/test-pages"
+
+    from("readability/test/test-pages")
+    into("src/test/resources/test-pages")
+    outputs.upToDateWhen { false }
+}
