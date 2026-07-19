@@ -2,11 +2,11 @@
 kotlin = "2.4.10"
 jdk-version = "25"
 ktfmt-gradle = "0.26.0"
-jsoup = "1.21.2"
-kotlinx-serialization = "1.9.0"
-logback-classic = "1.5.18"
-kotest = "6.0.3"
-mockk = "1.14.6"
+jsoup = "1.22.2"
+kotlinx-serialization = "1.11.0"
+logback-classic = "1.5.38"
+kotest = "6.2.2"
+mockk = "1.14.11"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
