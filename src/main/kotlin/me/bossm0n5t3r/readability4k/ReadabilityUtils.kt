@@ -1,7 +1,9 @@
 package me.bossm0n5t3r.readability4k
 
 import java.math.BigDecimal
+import java.math.MathContext
 import java.net.URI
+import java.net.URL
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -25,12 +27,14 @@ import me.bossm0n5t3r.readability4k.dom.ReadabilityData
  */
 object ReadabilityUtils {
     /** Get the text content length of an element */
-    fun getInnerText(element: Element, normalizeSpaces: Boolean = true): String =
-        if (normalizeSpaces) {
-            element.textContent.replace(Regexps.NORMALIZE, " ")
+    fun getInnerText(element: Element, normalizeSpaces: Boolean = true): String {
+        val textContent = element.textContent.trim()
+        return if (normalizeSpaces) {
+            textContent.replace(Regexps.NORMALIZE, " ")
         } else {
-            element.textContent
+            textContent
         }
+    }
 
     /** Calculate link density of an element */
     fun getLinkDensity(element: Element): BigDecimal {
@@ -44,7 +48,7 @@ object ReadabilityUtils {
                     else BigDecimal.ONE
                 getInnerText(linkNode).length.toBigDecimal() * coefficient
             }
-        return linkLength / textLength.toBigDecimal()
+        return linkLength.divide(textLength.toBigDecimal(), MathContext.DECIMAL64)
     }
 
     fun List<Node>.everyNode(predicate: (Node) -> Boolean): Boolean = this.all(predicate)
@@ -120,8 +124,11 @@ object ReadabilityUtils {
 
         val uniqTokensB = tokensB.filter { token -> !tokensA.contains(token) }
         val distanceB =
-            uniqTokensB.joinToString(" ").length.toBigDecimal() /
-                tokensB.joinToString(" ").length.toBigDecimal()
+            uniqTokensB
+                .joinToString(" ")
+                .length
+                .toBigDecimal()
+                .divide(tokensB.joinToString(" ").length.toBigDecimal(), MathContext.DECIMAL64)
 
         return BigDecimal.ONE - distanceB
     }
@@ -208,7 +215,7 @@ object ReadabilityUtils {
         if (textLength == BigDecimal.ZERO) return BigDecimal.ZERO
         val childrenLength =
             getAllNodesWithTag(element, tags).sumOf { getInnerText(it, true).length.toBigDecimal() }
-        return childrenLength / textLength
+        return childrenLength.divide(textLength, MathContext.DECIMAL64)
     }
 
     fun isValidByLine(element: Element, matchString: String): Boolean {
@@ -289,10 +296,32 @@ object ReadabilityUtils {
                 return uri
             }
 
-            try {
-                return URI(baseURI).resolve(uri).toString()
-            } catch (ex: Exception) {}
-            return uri
+            return try {
+                val url = uri.trim().replace("\u200B", "%E2%80%8B")
+                val resolvedUrl = URL(URL(baseURI), url)
+                if (url.startsWith("./") || url.startsWith("../")) {
+                    return resolvedUrl.toURI().normalize().toURL().toString()
+                }
+
+                val absoluteUrl =
+                    if (resolvedUrl.path.isEmpty() && resolvedUrl.authority != null) {
+                        buildString {
+                            append(resolvedUrl.protocol)
+                            append("://")
+                            append(resolvedUrl.authority)
+                            append('/')
+                            resolvedUrl.query?.let { append('?').append(it) }
+                            resolvedUrl.ref?.let { append('#').append(it) }
+                        }
+                    } else {
+                        resolvedUrl.toString()
+                    }
+                val host = resolvedUrl.host
+                if (host.isEmpty()) absoluteUrl
+                else absoluteUrl.replaceFirst(host, host.lowercase())
+            } catch (ex: Exception) {
+                uri
+            }
         }
 
         val links = getAllNodesWithTag(articleContent, listOf("a"))
@@ -648,14 +677,14 @@ object ReadabilityUtils {
         val trs = table.getElementsByTagName("tr")
 
         for (tr in trs) {
-            val rowspan = tr.getAttribute("rowspan")?.toIntOrNull() ?: 1
+            val rowspan = tr.getAttribute("rowspan")?.toIntOrNull()?.takeIf { it > 0 } ?: 1
             rows += rowspan
 
             var columnsInThisRow = 0
             val cells = tr.getElementsByTagName("td")
 
             for (cell in cells) {
-                val colspan = cell.getAttribute("colspan")?.toIntOrNull() ?: 1
+                val colspan = cell.getAttribute("colspan")?.toIntOrNull()?.takeIf { it > 0 } ?: 1
                 columnsInThisRow += colspan
             }
             columns = maxOf(columns, columnsInThisRow)
@@ -776,25 +805,25 @@ object ReadabilityUtils {
         for (table in tables) {
             val role = table.getAttribute("role")
             if (role == "presentation") {
-                table.setAttribute("_readabilityDataTable", "false")
+                table.setDataTable(false)
                 continue
             }
 
             val datatable = table.getAttribute("datatable")
             if (datatable == "0") {
-                table.setAttribute("_readabilityDataTable", "false")
+                table.setDataTable(false)
                 continue
             }
 
             val summary = table.getAttribute("summary").orEmpty()
             if (summary.isNotBlank()) {
-                table.setAttribute("_readabilityDataTable", "true")
+                table.setDataTable(true)
                 continue
             }
 
             val caption = table.getElementsByTagName("caption").firstOrNull()
             if (caption != null && caption.childNodes.isNotEmpty()) {
-                table.setAttribute("_readabilityDataTable", "true")
+                table.setDataTable(true)
                 continue
             }
 
@@ -802,28 +831,28 @@ object ReadabilityUtils {
             val descendantExists = { tag: String -> table.getElementsByTagName(tag).isNotEmpty() }
 
             if (dataTableDescendants.any(descendantExists)) {
-                table.setAttribute("_readabilityDataTable", "true")
+                table.setDataTable(true)
                 continue
             }
 
             if (table.getElementsByTagName("table").isNotEmpty()) {
-                table.setAttribute("_readabilityDataTable", "false")
+                table.setDataTable(false)
                 continue
             }
 
             val (rows, columns) = getRowAndColumnCount(table)
 
             if (columns == 1 || rows == 1) {
-                table.setAttribute("_readabilityDataTable", "false")
+                table.setDataTable(false)
                 continue
             }
 
             if (rows >= 10 || columns > 4) {
-                table.setAttribute("_readabilityDataTable", "true")
+                table.setDataTable(true)
                 continue
             }
 
-            table.setAttribute("_readabilityDataTable", (rows * columns > 10).toString())
+            table.setDataTable(rows * columns > 10)
         }
     }
 
@@ -906,7 +935,7 @@ object ReadabilityUtils {
 
             val srcsetAttr = elem.getAttribute("srcset")
             if (
-                (elem.hasAttribute("src") || (srcsetAttr != null && srcsetAttr != "null")) &&
+                (elem.src.isNotEmpty() || (srcsetAttr != null && srcsetAttr != "null")) &&
                     !elem.className.contains("lazy", ignoreCase = true)
             ) {
                 return@forEach
@@ -1033,7 +1062,7 @@ object ReadabilityUtils {
         }
 
         val isDataTable: (Element) -> Boolean = { element ->
-            element.hasAttribute("_readabilityDataTable")
+            element.readability?.isDataTable == true
         }
 
         removeNodes(getAllNodesWithTag(e, listOf(tag))) { element ->
@@ -1370,17 +1399,24 @@ object ReadabilityUtils {
 
     private const val DATA_READABILITY_CONTENT_SCORE = "data-readability-content-score"
 
-    private fun Element.hasContentScore(): Boolean = this.readability != null
+    private fun Element.setDataTable(isDataTable: Boolean) {
+        val readabilityData = readability ?: ReadabilityData(contentScore = 0.0)
+        readabilityData.isDataTable = isDataTable
+        readability = readabilityData
+    }
+
+    private fun Element.hasContentScore(): Boolean = this.readability?.hasContentScore == true
 
     private fun Element.getContentScore(): Double = this.readability?.contentScore ?: 0.0
 
     private fun Element.setContentScore(score: Double = 0.0) {
         val readabilityData = this.readability
         if (readabilityData == null) {
-            this.readability = ReadabilityData(score)
+            this.readability = ReadabilityData(contentScore = score, hasContentScore = true)
             return
         }
         readabilityData.contentScore = score
+        readabilityData.hasContentScore = true
     }
 
     fun grabArticle(page: Element? = null, p: ReadabilityProperties): Element? {

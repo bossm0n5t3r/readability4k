@@ -21,5 +21,5 @@ data class ReadabilityOptions(
     },
     val disableJSONLD: Boolean = false,
     val allowedVideoRegex: Regex = Regexps.VIDEOS,
-    val linkDensityModifier: BigDecimal = BigDecimal.ONE,
+    val linkDensityModifier: BigDecimal = BigDecimal.ZERO,
 )

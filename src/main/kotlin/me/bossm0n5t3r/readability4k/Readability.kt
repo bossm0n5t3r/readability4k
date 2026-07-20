@@ -35,7 +35,7 @@ class Readability(doc: Document, options: ReadabilityOptions = ReadabilityOption
 
         postProcessContent(articleContent, p)
 
-        if (p.metadata["excerpt"].isNullOrBlank()) {
+        if (p.metadata["excerpt"].isNullOrEmpty()) {
             val excerpt =
                 articleContent.getElementsByTagName("p").firstOrNull()?.textContent?.trim()
             if (excerpt != null) {

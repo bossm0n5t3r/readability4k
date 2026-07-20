@@ -129,16 +129,13 @@ class Element(tag: String) : Node() {
             return builder.toString()
         }
         set(html) {
-            val parser = DOMParser()
-            val node = parser.parse(html)
-
             childNodes.forEach { it.parentNode = null }
             childNodes.clear()
             children.clear()
 
-            childNodes.addAll(node.childNodes)
-            children.addAll(node.children)
-
+            val parsedDocument = DOMParser().parse(html)
+            childNodes.addAll(parsedDocument.childNodes)
+            children.addAll(parsedDocument.children)
             childNodes.forEach { it.parentNode = this }
         }
 

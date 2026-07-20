@@ -1,8 +1,10 @@
 package me.bossm0n5t3r.readability4k
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import me.bossm0n5t3r.readability4k.dom.DOMParser
 
 class UtilsTest {
     @Test
@@ -26,5 +28,17 @@ class UtilsTest {
         val prettyHtml = Utils.prettyPrint(html)
         assertTrue(prettyHtml.contains("    "), "Should contain indentation")
         LOGGER.debug("Pretty printed HTML: {}", prettyHtml)
+    }
+
+    @Test
+    fun testGetInnerTextTrimsWhitespace() {
+        val element =
+            DOMParser().parse("<div>  first\n\nsecond  </div>").getElementsByTagName("div").single()
+
+        assertEquals("first second", ReadabilityUtils.getInnerText(element))
+        assertEquals(
+            "first\n\nsecond",
+            ReadabilityUtils.getInnerText(element, normalizeSpaces = false),
+        )
     }
 }
