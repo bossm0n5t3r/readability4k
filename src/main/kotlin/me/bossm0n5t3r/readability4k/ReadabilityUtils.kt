@@ -300,7 +300,25 @@ object ReadabilityUtils {
                 val url = uri.trim().replace("\u200B", "%E2%80%8B")
                 val resolvedUrl = URL(URL(baseURI), url)
                 if (url.startsWith("./") || url.startsWith("../")) {
-                    return resolvedUrl.toURI().normalize().toURL().toString()
+                    val normalizedUri = resolvedUrl.toURI().normalize()
+                    val scheme = normalizedUri.scheme
+                    val rawAuthority = normalizedUri.rawAuthority
+                    if (scheme.isNullOrBlank() || rawAuthority.isNullOrBlank()) {
+                        return resolvedUrl.toString()
+                    }
+                    val normalizedPath =
+                        normalizedUri.rawPath
+                            .orEmpty()
+                            .replace(Regex("""^(?:/\.\.)+"""), "")
+                            .ifEmpty { "/" }
+                    return buildString {
+                        append(scheme)
+                        append("://")
+                        append(rawAuthority)
+                        append(normalizedPath)
+                        normalizedUri.rawQuery?.let { append('?').append(it) }
+                        normalizedUri.rawFragment?.let { append('#').append(it) }
+                    }
                 }
 
                 val absoluteUrl =
@@ -1084,10 +1102,7 @@ object ReadabilityUtils {
                         getAllNodesWithTag(element, listOf("ul", "ol")).sumOf {
                             getInnerText(it).length
                         }
-                    val elementTextLength = getInnerText(element).length
-                    if (elementTextLength > 0) {
-                        isList = listLength.toDouble() / elementTextLength > 0.9
-                    }
+                    isList = listLength.toDouble() / getInnerText(element).length > 0.9
                 }
 
                 val pCount = element.getElementsByTagName("p").size

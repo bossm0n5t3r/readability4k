@@ -249,6 +249,21 @@ class ReadabilityTest :
                             ?.jsonPrimitive
                             ?.content
                 }
+
+                it("should normalize relative URIs that escape the origin root") {
+                    val html =
+                        """<html><body><div><a href="../../../index.html">link</a></div></body></html>"""
+                    val doc = DOMParser().parse(html, "http://fakehost/test/page.html")
+                    val div = doc.getElementsByTagName("div").first()
+                    div.shouldNotBeNull()
+                    ReadabilityUtils.fixRelativeUris(
+                        div,
+                        ReadabilityProperties(doc, ReadabilityOptions()),
+                    )
+                    val link = div.getElementsByTagName("a").first()
+                    link.shouldNotBeNull()
+                    link.getAttribute("href") shouldBe "http://fakehost/index.html"
+                }
             }
         }
 
