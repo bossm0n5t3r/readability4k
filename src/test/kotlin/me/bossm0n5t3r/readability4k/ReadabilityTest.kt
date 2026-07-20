@@ -12,6 +12,7 @@ import io.mockk.just
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
+import java.math.BigDecimal
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonPrimitive
 import me.bossm0n5t3r.readability4k.dom.Attribute
@@ -62,6 +63,52 @@ class ReadabilityTest :
                         .p
                         .allowedVideoRegex
                         .pattern shouldBe customRegex.pattern
+                }
+
+                it("should honor constructor option defaults and overrides") {
+                    val default = Readability(doc).p
+                    default.debug shouldBe false
+                    default.maxElemsToParse shouldBe 0
+                    default.nbTopCandidates shouldBe 5
+                    default.charThreshold shouldBe 500
+                    default.classesToPreserve shouldBe setOf("page")
+                    default.keepClasses shouldBe false
+                    default.disableJSONLD shouldBe false
+                    default.allowedVideoRegex.pattern shouldBe Regexps.VIDEOS.pattern
+                    default.linkDensityModifier shouldBe BigDecimal.ZERO
+
+                    val serializerDoc =
+                        DOMParser().parse("<html><div>default serializer</div></html>")
+                    val serializerElement = serializerDoc.documentElement!!
+                    default.serializer(serializerElement) shouldBe serializerElement.innerHTML
+
+                    val override =
+                        Readability(
+                                doc,
+                                ReadabilityOptions(
+                                    debug = true,
+                                    maxElemsToParse = 42,
+                                    nbTopCandidates = 42,
+                                    charThreshold = 42,
+                                    classesToPreserve = listOf("caption"),
+                                    keepClasses = true,
+                                    serializer = { "serialized" },
+                                    disableJSONLD = true,
+                                    allowedVideoRegex = Regex("custom-video"),
+                                    linkDensityModifier = BigDecimal("0.25"),
+                                ),
+                            )
+                            .p
+                    override.debug shouldBe true
+                    override.maxElemsToParse shouldBe 42
+                    override.nbTopCandidates shouldBe 42
+                    override.charThreshold shouldBe 42
+                    override.classesToPreserve shouldBe setOf("page", "caption")
+                    override.keepClasses shouldBe true
+                    override.serializer(serializerElement) shouldBe "serialized"
+                    override.disableJSONLD shouldBe true
+                    override.allowedVideoRegex.pattern shouldBe "custom-video"
+                    override.linkDensityModifier shouldBe BigDecimal("0.25")
                 }
             }
 
@@ -150,6 +197,58 @@ class ReadabilityTest :
                             ?.content
                     content shouldBe expectedXhtml
                 }
+
+                it("should honor parse() return contract") {
+                    val fixture = Utils.getTestPages().single { it.dir == "001" }
+                    val doc = DOMParser().parse(fixture.source, "http://fakehost/test/page.html")
+                    val result =
+                        Readability(doc, ReadabilityOptions(classesToPreserve = listOf("caption")))
+                            .parse()
+
+                    result.shouldNotBeNull()
+                    result.content.shouldNotBeEmpty()
+
+                    val parsedContentDoc = DOMParser().parse(result.content)
+                    val expectedTextContent = parsedContentDoc.textContent
+                    result.textContent shouldBe expectedTextContent
+                    result.length shouldBe expectedTextContent.length
+
+                    result.title shouldBe
+                        fixture.expectedMetadata["title"]
+                            ?.takeIf { it != JsonNull }
+                            ?.jsonPrimitive
+                            ?.content
+                    result.byline shouldBe
+                        fixture.expectedMetadata["byline"]
+                            ?.takeIf { it != JsonNull }
+                            ?.jsonPrimitive
+                            ?.content
+                    result.excerpt shouldBe
+                        fixture.expectedMetadata["excerpt"]
+                            ?.takeIf { it != JsonNull }
+                            ?.jsonPrimitive
+                            ?.content
+                    result.siteName shouldBe
+                        fixture.expectedMetadata["siteName"]
+                            ?.takeIf { it != JsonNull }
+                            ?.jsonPrimitive
+                            ?.content
+                    result.dir shouldBe
+                        fixture.expectedMetadata["dir"]
+                            ?.takeIf { it != JsonNull }
+                            ?.jsonPrimitive
+                            ?.content
+                    result.lang shouldBe
+                        fixture.expectedMetadata["lang"]
+                            ?.takeIf { it != JsonNull }
+                            ?.jsonPrimitive
+                            ?.content
+                    result.publishedTime shouldBe
+                        fixture.expectedMetadata["publishedTime"]
+                            ?.takeIf { it != JsonNull }
+                            ?.jsonPrimitive
+                            ?.content
+                }
             }
         }
 
@@ -179,16 +278,17 @@ class ReadabilityTest :
                             result = reader.parse() ?: error("Readability.parse() returned null")
                         }
 
-                        xit("should return a result object") {
+                        xit("${testPage.dir}: should return a result object") {
                             result.content.shouldNotBeEmpty()
                             result.title.shouldNotBeNull()
                             result.excerpt.shouldNotBeNull()
                             result.byline.shouldNotBeNull()
                         }
 
-                        it("should extract expected content") {
-                            val actualDoc = DOMParser().parse(result.content)
-                            val expectedDoc = DOMParser().parse(testPage.expectedContent)
+                        it("${testPage.dir}: should extract expected content") {
+                            val actualDoc = DOMParser().parse(Utils.prettyPrint(result.content))
+                            val expectedDoc =
+                                DOMParser().parse(Utils.prettyPrint(testPage.expectedContent))
 
                             traverseDOM(actualDoc, expectedDoc) { actualNode, expectedNode ->
                                 if (actualNode != null && expectedNode != null) {
@@ -250,7 +350,7 @@ class ReadabilityTest :
                             }
                         }
 
-                        it("should extract expected title") {
+                        it("${testPage.dir}: should extract expected title") {
                             result.title shouldBe
                                 testPage.expectedMetadata["title"]
                                     ?.takeIf { it != JsonNull }
@@ -258,7 +358,7 @@ class ReadabilityTest :
                                     ?.content
                         }
 
-                        it("should extract expected byline") {
+                        it("${testPage.dir}: should extract expected byline") {
                             result.byline shouldBe
                                 testPage.expectedMetadata["byline"]
                                     ?.takeIf { it != JsonNull }
@@ -266,7 +366,7 @@ class ReadabilityTest :
                                     ?.content
                         }
 
-                        it("should extract expected excerpt") {
+                        it("${testPage.dir}: should extract expected excerpt") {
                             result.excerpt shouldBe
                                 testPage.expectedMetadata["excerpt"]
                                     ?.takeIf { it != JsonNull }
@@ -274,7 +374,7 @@ class ReadabilityTest :
                                     ?.content
                         }
 
-                        it("should extract expected site name") {
+                        it("${testPage.dir}: should extract expected site name") {
                             result.siteName shouldBe
                                 testPage.expectedMetadata["siteName"]
                                     ?.takeIf { it != JsonNull }
@@ -285,7 +385,7 @@ class ReadabilityTest :
                         testPage.expectedMetadata["dir"]
                             ?.takeIf { it != JsonNull }
                             ?.let { expectedDir ->
-                                it("should extract expected direction") {
+                                it("${testPage.dir}: should extract expected direction") {
                                     result.dir shouldBe expectedDir.jsonPrimitive.content
                                 }
                             }
@@ -293,7 +393,7 @@ class ReadabilityTest :
                         testPage.expectedMetadata["lang"]
                             ?.takeIf { it != JsonNull }
                             ?.let { expectedLang ->
-                                it("should extract expected language") {
+                                it("${testPage.dir}: should extract expected language") {
                                     result.lang shouldBe expectedLang.jsonPrimitive.content
                                 }
                             }
@@ -301,7 +401,7 @@ class ReadabilityTest :
                         testPage.expectedMetadata["publishedTime"]
                             ?.takeIf { it != JsonNull }
                             ?.let { publishedTime ->
-                                it("should extract expected published time") {
+                                it("${testPage.dir}: should extract expected published time") {
                                     result.publishedTime shouldBe
                                         publishedTime.jsonPrimitive.content
                                 }
