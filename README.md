@@ -1,5 +1,7 @@
 # readability4k
 
+[![Maven Central Version](https://img.shields.io/maven-central/v/com.m0n5t3r.boss/readability4k)](https://central.sonatype.com/artifact/com.m0n5t3r.boss/readability4k)
+
 A Kotlin port of [Mozilla Readability](https://github.com/mozilla/readability) that extracts readable article content
 from HTML pages using a self-contained DOM implementation.
 
