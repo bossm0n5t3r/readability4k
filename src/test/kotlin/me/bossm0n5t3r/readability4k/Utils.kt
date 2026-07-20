@@ -20,7 +20,7 @@ object Utils {
         return Json.parseToJsonElement(jsonContent).jsonObject.toMap()
     }
 
-    private val testPageRoot = Path("src/test/resources/test-pages")
+    private val testPageRoot = Path("readability/test/test-pages")
 
     fun getTestPages(): List<TestPage> =
         testPageRoot
