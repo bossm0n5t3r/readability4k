@@ -12,7 +12,7 @@ version = "1.0-SNAPSHOT"
 repositories { mavenCentral() }
 
 dependencies {
-    implementation(libs.jsoup)
+    testImplementation(libs.jsoup)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.logback.classic)
     testImplementation(libs.kotlin.test.junit5)
