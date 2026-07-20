@@ -9,18 +9,25 @@ attribution.
 ## Maven coordinates
 
 ```text
-me.bossm0n5t3r:readability4k:1.0.0
+com.m0n5t3r.boss:readability4k:1.0.0
 ```
 
-Remote distribution is not configured yet.
+Maven Central Portal publication is configured. After verifying the `com.m0n5t3r.boss` namespace, run:
+
+```sh
+./deploy.sh
+```
+
+The script prompts for any missing PGP and Central Portal credentials without persisting them. It creates a signed
+Central bundle and uploads it as `USER_MANAGED`; release it from the Central Portal only after its validation succeeds.
 
 ## Usage
 
-The library works with `me.bossm0n5t3r.readability4k.dom.Document`, not with Jsoup `Document`.
+The library works with `com.m0n5t3r.boss.readability4k.dom.Document`, not with Jsoup `Document`.
 
 ```kotlin
-import me.bossm0n5t3r.readability4k.Readability
-import me.bossm0n5t3r.readability4k.dom.DOMParser
+import com.m0n5t3r.boss.readability4k.Readability
+import com.m0n5t3r.boss.readability4k.dom.DOMParser
 
 // Supply the source URL so relative links and media URLs are resolved.
 val document = DOMParser().parse(html, "https://example.com/article")
