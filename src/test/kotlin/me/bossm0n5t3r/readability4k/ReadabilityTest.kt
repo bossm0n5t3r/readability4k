@@ -264,6 +264,130 @@ class ReadabilityTest :
                     link.shouldNotBeNull()
                     link.getAttribute("href") shouldBe "http://fakehost/index.html"
                 }
+
+                it("should not call getJSONLD when disableJSONLD is true") {
+                    mockkObject(ReadabilityUtils)
+                    every { ReadabilityUtils.getJSONLD(any()) } returns emptyMap()
+
+                    val doc = DOMParser().parse(exampleSource)
+                    Readability(doc, ReadabilityOptions(disableJSONLD = true)).parse()
+
+                    verify(exactly = 0) { ReadabilityUtils.getJSONLD(any()) }
+                }
+
+                it("should fall back to meta tags when JSON-LD values are blank") {
+                    val html =
+                        """
+                        <html>
+                        <head>
+                            <meta property="og:title" content="Open &amp;amp; Graph" />
+                            <meta name="author" content="Meta Author" />
+                            <meta name="description" content="Meta excerpt" />
+                            <meta property="og:site_name" content="Meta Site" />
+                            <meta property="article:published_time" content="2024-01-02" />
+                        </head>
+                        <body></body>
+                        </html>
+                        """
+                            .trimIndent()
+                    val doc = DOMParser().parse(html)
+                    val p = ReadabilityProperties(doc, ReadabilityOptions())
+                    val metadata = ReadabilityUtils.getArticleMetadata(emptyMap(), p)
+
+                    metadata["title"] shouldBe "Open & Graph"
+                    metadata["byline"] shouldBe "Meta Author"
+                    metadata["excerpt"] shouldBe "Meta excerpt"
+                    metadata["siteName"] shouldBe "Meta Site"
+                    metadata["publishedTime"] shouldBe "2024-01-02"
+                }
+
+                it("should pick the first article from @graph when root @type is empty") {
+                    val html =
+                        """
+                        <html>
+                        <head>
+                            <script type="application/ld+json">
+                            {
+                                "@context": "https://schema.org",
+                                "@type": "",
+                                "@graph": [
+                                    { "@type": "Article", "headline": "Graph title" }
+                                ]
+                            }
+                            </script>
+                        </head>
+                        <body></body>
+                        </html>
+                        """
+                            .trimIndent()
+                    val doc = DOMParser().parse(html)
+                    val p = ReadabilityProperties(doc, ReadabilityOptions())
+                    val jsonld = ReadabilityUtils.getJSONLD(p)
+
+                    jsonld["title"] shouldBe "Graph title"
+                }
+
+                it("should join JSON-LD author array names like the original") {
+                    val noBylineHtml =
+                        """
+                        <html>
+                        <head>
+                            <script type="application/ld+json">
+                            {
+                                "@context": "https://schema.org",
+                                "@type": "Article",
+                                "author": [{}, {"name": "Alice"}]
+                            }
+                            </script>
+                        </head>
+                        <body></body>
+                        </html>
+                        """
+                            .trimIndent()
+                    val noBylineDoc = DOMParser().parse(noBylineHtml)
+                    val noBylineP = ReadabilityProperties(noBylineDoc, ReadabilityOptions())
+                    ReadabilityUtils.getJSONLD(noBylineP).containsKey("byline") shouldBe false
+
+                    val withEmptyHtml =
+                        """
+                        <html>
+                        <head>
+                            <script type="application/ld+json">
+                            {
+                                "@context": "https://schema.org",
+                                "@type": "Article",
+                                "author": [{"name": ""}, {"name": "Alice"}]
+                            }
+                            </script>
+                        </head>
+                        <body></body>
+                        </html>
+                        """
+                            .trimIndent()
+                    val withEmptyDoc = DOMParser().parse(withEmptyHtml)
+                    val withEmptyP = ReadabilityProperties(withEmptyDoc, ReadabilityOptions())
+                    ReadabilityUtils.getJSONLD(withEmptyP)["byline"] shouldBe ", Alice"
+                }
+
+                it("should fall back to the first paragraph when no excerpt metadata exists") {
+                    val paragraph =
+                        "First paragraph is retained as the fallback excerpt. ".repeat(20).trim()
+                    val html =
+                        """
+                        <html>
+                        <head><title>Title</title></head>
+                        <body>
+                            <article><p>$paragraph</p></article>
+                        </body>
+                        </html>
+                    """
+                            .trimIndent()
+                    val doc = DOMParser().parse(html)
+                    val result = Readability(doc, ReadabilityOptions(charThreshold = 0)).parse()
+
+                    result.shouldNotBeNull()
+                    result.excerpt shouldBe paragraph
+                }
             }
         }
 

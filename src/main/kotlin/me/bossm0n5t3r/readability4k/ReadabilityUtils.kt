@@ -1027,7 +1027,7 @@ object ReadabilityUtils {
         }
 
         val title =
-            jsonld["title"]
+            jsonld["title"]?.takeIf { it.isNotEmpty() }
                 ?: values["dc:title"]
                 ?: values["dcterm:title"]
                 ?: values["og:title"]
@@ -1041,7 +1041,7 @@ object ReadabilityUtils {
         val articleAuthor = values["article:author"]?.takeIf { !isUrl(it) }
 
         val byline =
-            jsonld["byline"]
+            jsonld["byline"]?.takeIf { it.isNotEmpty() }
                 ?: values["dc:creator"]
                 ?: values["dcterm:creator"]
                 ?: values["author"]
@@ -1049,7 +1049,7 @@ object ReadabilityUtils {
                 ?: articleAuthor
 
         val excerpt =
-            jsonld["excerpt"]
+            jsonld["excerpt"]?.takeIf { it.isNotEmpty() }
                 ?: values["dc:description"]
                 ?: values["dcterm:description"]
                 ?: values["og:description"]
@@ -1058,10 +1058,10 @@ object ReadabilityUtils {
                 ?: values["description"]
                 ?: values["twitter:description"]
 
-        val siteName = jsonld["siteName"] ?: values["og:site_name"]
+        val siteName = jsonld["siteName"]?.takeIf { it.isNotEmpty() } ?: values["og:site_name"]
 
         val publishedTime =
-            jsonld["datePublished"]
+            jsonld["datePublished"]?.takeIf { it.isNotEmpty() }
                 ?: values["article:published_time"]
                 ?: values["parsely-pub-date"]
 
@@ -1255,7 +1255,12 @@ object ReadabilityUtils {
                 if (!matches) continue
 
                 var finalParsed = parsed
-                if (parsed["@type"] == null && parsed["@graph"] is JsonArray) {
+                val rootType = parsed["@type"]
+                if (
+                    (rootType == null ||
+                        (rootType is JsonPrimitive && rootType.contentOrNull == "")) &&
+                        parsed["@graph"] is JsonArray
+                ) {
                     finalParsed =
                         (parsed["@graph"] as JsonArray)
                             .firstOrNull { element ->
@@ -1298,19 +1303,18 @@ object ReadabilityUtils {
                     }
 
                     is JsonArray -> {
-                        val authors =
-                            author
-                                .mapNotNull {
-                                    (it as? JsonObject)
-                                        ?.get("name")
-                                        ?.jsonPrimitive
-                                        ?.contentOrNull
-                                        ?.trim()
-                                }
-                                .filter { it.isNotEmpty() }
-
-                        if (authors.isNotEmpty()) {
-                            metadata["byline"] = authors.joinToString(", ")
+                        val firstAuthor = author.firstOrNull() as? JsonObject
+                        if (firstAuthor?.get("name")?.jsonPrimitive?.contentOrNull != null) {
+                            metadata["byline"] =
+                                author
+                                    .mapNotNull {
+                                        (it as? JsonObject)
+                                            ?.get("name")
+                                            ?.jsonPrimitive
+                                            ?.contentOrNull
+                                            ?.trim()
+                                    }
+                                    .joinToString(", ")
                         }
                     }
 
