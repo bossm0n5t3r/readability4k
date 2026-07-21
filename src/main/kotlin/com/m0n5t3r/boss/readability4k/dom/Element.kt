@@ -153,7 +153,7 @@ class Element(tag: String) : Node() {
         }
 
     companion object {
-        private val VOID_ELEMENTS =
+        internal val VOID_ELEMENTS =
             setOf(
                 "area",
                 "base",

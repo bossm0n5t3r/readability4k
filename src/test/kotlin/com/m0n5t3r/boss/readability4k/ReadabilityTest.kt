@@ -264,6 +264,23 @@ class ReadabilityTest :
                     link.getAttribute("href") shouldBe "http://fakehost/index.html"
                 }
 
+                it("should normalize legacy Windows file URIs") {
+                    val doc =
+                        DOMParser()
+                            .parse(
+                                """<html><body><div><img src="file:///C|/path/to/image.gif"></div></body></html>""",
+                                "http://fakehost/test/page.html",
+                            )
+                    val div = doc.getElementsByTagName("div").first().shouldNotBeNull()
+                    ReadabilityUtils.fixRelativeUris(
+                        div,
+                        ReadabilityProperties(doc, ReadabilityOptions()),
+                    )
+
+                    div.getElementsByTagName("img").first().shouldNotBeNull().src shouldBe
+                        "file:///C:/path/to/image.gif"
+                }
+
                 it("should not call getJSONLD when disableJSONLD is true") {
                     mockkObject(ReadabilityUtils)
                     every { ReadabilityUtils.getJSONLD(any()) } returns emptyMap()

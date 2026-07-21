@@ -298,6 +298,12 @@ object ReadabilityUtils {
 
             return try {
                 val url = uri.trim().replace("\u200B", "%E2%80%8B")
+                if (url.startsWith("file:")) {
+                    val path = url.removePrefix("file:").trimStart('/')
+                    if (path.length > 1 && path[0].isLetter() && path[1] == '|') {
+                        return "file:///" + path.replaceFirst('|', ':')
+                    }
+                }
                 val resolvedUrl = URL(URL(baseURI), url)
                 if (url.startsWith("./") || url.startsWith("../")) {
                     val normalizedUri = resolvedUrl.toURI().normalize()

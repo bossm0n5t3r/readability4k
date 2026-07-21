@@ -136,13 +136,31 @@ class DOMParser {
     }
 
     private fun readChildren(node: Node) {
-        var child = readNode()
-        while (child != null) {
+        while (true) {
+            val child = readNode()
+            if (child == null) {
+                if (!discardIgnorableClosingTag(node)) return
+                continue
+            }
+
             if (child.nodeType != NodeType.COMMENT_NODE) {
                 node.appendChild(child)
             }
-            child = readNode()
         }
+    }
+
+    private fun discardIgnorableClosingTag(parent: Node): Boolean {
+        if (!html.startsWith("</", currentChar)) return false
+
+        val end = html.indexOf('>', currentChar + 2)
+        if (end == -1) return false
+
+        val tag = html.substring(currentChar + 2, end).trim().lowercase()
+        if (parent is Element && tag.equals(parent.matchingTag, ignoreCase = true)) return false
+        if (tag != "script" && tag !in Element.VOID_ELEMENTS) return false
+
+        currentChar = end + 1
+        return true
     }
 
     private fun discardNextComment(): Comment? {
@@ -158,6 +176,21 @@ class DOMParser {
             }
         }
         return Comment()
+    }
+
+    private fun readRawText(node: Element): Boolean {
+        val closingTag = "</${node.matchingTag}>"
+        val end = html.indexOf(closingTag, currentChar, ignoreCase = true)
+        if (end == -1) {
+            error("expected '$closingTag' but reached end of document")
+            return false
+        }
+
+        if (currentChar < end) {
+            node.appendChild(TextNode().apply { innerHTML = html.substring(currentChar, end) })
+        }
+        currentChar = end + closingTag.length
+        return true
     }
 
     private fun readNode(): Node? {
@@ -214,22 +247,31 @@ class DOMParser {
         val node = retPair[0] as Element
         val closed = retPair[1] as Boolean
 
-        if (!closed) {
-            readChildren(node)
-            val closingTag = "</${node.matchingTag}>"
-            if (!match(closingTag)) {
-                val errorMessage =
-                    if (currentChar < 0 || currentChar >= html.length) {
-                        ", but currentChar < 0 || currentChar >= html.length, $currentChar, ${html.length}"
-                    } else {
-                        "and got " +
-                            html.substring(
-                                currentChar,
-                                (currentChar + closingTag.length).coerceAtMost(html.length),
-                            )
-                    }
-                error("expected '$closingTag' $errorMessage")
-                return null
+        val closingTag = "</${node.matchingTag}>"
+        val hasExplicitClosingTag = html.indexOf(closingTag, currentChar, ignoreCase = true) != -1
+        if (!closed && (node.localName !in Element.VOID_ELEMENTS || hasExplicitClosingTag)) {
+            if (
+                node.localName == "script" &&
+                    !html.startsWith("<?", currentChar) &&
+                    !html.startsWith("<!--", currentChar)
+            ) {
+                if (!readRawText(node)) return null
+            } else {
+                readChildren(node)
+                if (!match(closingTag)) {
+                    val errorMessage =
+                        if (currentChar < 0 || currentChar >= html.length) {
+                            ", but currentChar < 0 || currentChar >= html.length, $currentChar, ${html.length}"
+                        } else {
+                            "and got " +
+                                html.substring(
+                                    currentChar,
+                                    (currentChar + closingTag.length).coerceAtMost(html.length),
+                                )
+                        }
+                    error("expected '$closingTag' $errorMessage")
+                    return null
+                }
             }
         }
 
