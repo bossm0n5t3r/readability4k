@@ -36,5 +36,41 @@ class DOMParserCompatibilityTest :
                 doc.body.shouldNotBeNull().textContent shouldBe "Article text.After"
                 parser.errorState shouldBe ""
             }
+
+            it("should parse unquoted and boolean attributes") {
+                val parser = DOMParser()
+                val doc =
+                    parser.parse(
+                        """<div data-liked=comment-not-liked hidden><a href=https://example.com/path>link</a></div>"""
+                    )
+                val div = doc.getElementsByTagName("div").single()
+                val link = div.getElementsByTagName("a").single()
+
+                div.getAttribute("data-liked") shouldBe "comment-not-liked"
+                div.getAttribute("hidden") shouldBe ""
+                link.href shouldBe "https://example.com/path"
+                parser.errorState shouldBe ""
+            }
+
+            it("should advance past malformed attribute separators") {
+                val parser = DOMParser()
+                val doc = parser.parse("""<div =broken data-id=42>content</div>""")
+                val div = doc.getElementsByTagName("div").single()
+
+                div.getAttribute("data-id") shouldBe "42"
+                div.textContent shouldBe "content"
+                parser.errorState shouldBe ""
+            }
+
+            it("should implicitly close inline elements before a list item closes") {
+                val parser = DOMParser()
+                val doc = parser.parse("""<ul><li><a href="#"><span>First item</li></ul>""")
+                val listItem = doc.getElementsByTagName("li").single()
+                val link = listItem.getElementsByTagName("a").single()
+
+                listItem.textContent shouldBe "First item"
+                link.firstElementChild?.localName shouldBe "span"
+                parser.errorState shouldBe ""
+            }
         }
     })

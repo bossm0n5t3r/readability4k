@@ -12,6 +12,8 @@ class DOMParser {
 
     companion object {
         private val WHITESPACE = setOf(' ', '\t', '\n', '\r')
+        private val INLINE_ELEMENTS = setOf("a", "span")
+        private val LEGACY_CONTAINER_VOID_ELEMENTS = setOf("base", "input")
     }
 
     fun parse(html: String, url: String = ""): Document {
@@ -54,24 +56,52 @@ class DOMParser {
     }
 
     private fun readAttribute(node: Element) {
-        val n = html.indexOf('=', currentChar)
-        if (n == -1) {
-            currentChar = html.length
+        val nameStart = currentChar
+        while (true) {
+            val c = peekNext() ?: break
+            if (c in WHITESPACE || c == '=' || c == '>' || c == '/') break
+            currentChar++
+        }
+
+        val name = html.substring(nameStart, currentChar)
+        if (name.isEmpty()) {
+            currentChar++
             return
         }
 
-        val name = html.substring(currentChar, n)
-        currentChar = n + 1
-
-        if (name.isEmpty()) return
-
-        val c = nextChar()
-        if (c != '"' && c != '\'') {
-            error("Error reading attribute $name, expecting '\"'")
-            return
+        while (peekNext() in WHITESPACE) {
+            currentChar++
         }
 
-        val value = readString(c) ?: return
+        var value = ""
+        if (peekNext() == '=') {
+            currentChar++
+            while (peekNext() in WHITESPACE) {
+                currentChar++
+            }
+
+            val quote = peekNext()
+            value =
+                if (quote == '"' || quote == '\'') {
+                    currentChar++
+                    readString(quote) ?: return
+                } else {
+                    val valueStart = currentChar
+                    while (true) {
+                        val c = peekNext() ?: break
+                        if (
+                            c in WHITESPACE ||
+                                c == '>' ||
+                                (c == '/' && html.getOrNull(currentChar + 1) == '>')
+                        ) {
+                            break
+                        }
+                        currentChar++
+                    }
+                    html.substring(valueStart, currentChar)
+                }
+        }
+
         node.attributes.add(Attribute(name, HtmlEntities.decodeHTML(value)))
     }
 
@@ -193,6 +223,14 @@ class DOMParser {
         return true
     }
 
+    private fun isImplicitlyClosedByListItem(node: Element): Boolean {
+        if (node.localName !in INLINE_ELEMENTS || !html.startsWith("</", currentChar)) return false
+
+        val end = html.indexOf('>', currentChar + 2)
+        return end != -1 &&
+            html.substring(currentChar + 2, end).trim().equals("li", ignoreCase = true)
+    }
+
     private fun readNode(): Node? {
         var c: Char? = nextChar() ?: return null
 
@@ -248,7 +286,9 @@ class DOMParser {
         val closed = retPair[1] as Boolean
 
         val closingTag = "</${node.matchingTag}>"
-        val hasExplicitClosingTag = html.indexOf(closingTag, currentChar, ignoreCase = true) != -1
+        val hasExplicitClosingTag =
+            node.localName in LEGACY_CONTAINER_VOID_ELEMENTS &&
+                html.indexOf(closingTag, currentChar, ignoreCase = true) != -1
         if (!closed && (node.localName !in Element.VOID_ELEMENTS || hasExplicitClosingTag)) {
             if (
                 node.localName == "script" &&
@@ -259,6 +299,7 @@ class DOMParser {
             } else {
                 readChildren(node)
                 if (!match(closingTag)) {
+                    if (isImplicitlyClosedByListItem(node)) return node
                     val errorMessage =
                         if (currentChar < 0 || currentChar >= html.length) {
                             ", but currentChar < 0 || currentChar >= html.length, $currentChar, ${html.length}"
