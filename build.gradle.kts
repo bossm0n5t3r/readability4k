@@ -20,7 +20,7 @@ plugins {
 
 group = "com.m0n5t3r.boss"
 
-version = "1.0.0"
+version = "1.0.1"
 
 val centralStagingRepository = layout.buildDirectory.dir("central-staging")
 val centralPublicationPath =
