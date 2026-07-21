@@ -33,6 +33,24 @@ require_clean_work_tree() {
   fi
 }
 
+require_pushed_head() {
+  local ahead_count
+  local upstream
+
+  if ! upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null)"; then
+    printf 'Current branch has no upstream. Push it before deploying a release.\n' >&2
+    exit 1
+  fi
+
+  ahead_count="$(git rev-list --count "$upstream..HEAD")"
+  if [ "$ahead_count" -gt 0 ]; then
+    printf 'HEAD has %s commit(s) not pushed to %s. Push before deploying a release.\n' \
+      "$ahead_count" \
+      "$upstream" >&2
+    exit 1
+  fi
+}
+
 release_version() {
   ./gradlew --quiet properties --property version |
     while IFS=':' read -r property value; do
@@ -69,6 +87,7 @@ create_and_push_release_tag() {
 
 require_command git
 require_clean_work_tree
+require_pushed_head
 
 release_remote="${RELEASE_REMOTE:-origin}"
 git remote get-url "$release_remote" >/dev/null
