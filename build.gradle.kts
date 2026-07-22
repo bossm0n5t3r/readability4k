@@ -44,7 +44,7 @@ repositories { mavenCentral() }
 dependencies {
     testImplementation(libs.jsoup)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.logback.classic)
+    implementation(libs.slf4j.api)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.kotest.framework.engine)
     testImplementation(libs.kotest.runner.junit5)
