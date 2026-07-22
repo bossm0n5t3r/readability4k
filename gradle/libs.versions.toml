@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.4.10"
-jdk-version = "25"
+jdk-version = "17"
 ktfmt-gradle = "0.26.0"
 jsoup = "1.22.2"
 kotlinx-serialization = "1.11.0"
