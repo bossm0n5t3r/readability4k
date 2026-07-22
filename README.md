@@ -11,7 +11,7 @@ attribution.
 ## Maven coordinates
 
 ```text
-com.m0n5t3r.boss:readability4k:1.0.0
+com.m0n5t3r.boss:readability4k:1.1.0
 ```
 
 Maven Central Portal publication is configured. After verifying the `com.m0n5t3r.boss` namespace, run:
@@ -22,6 +22,19 @@ Maven Central Portal publication is configured. After verifying the `com.m0n5t3r
 
 The script prompts for any missing PGP and Central Portal credentials without persisting them. It creates a signed
 Central bundle and uploads it as `USER_MANAGED`; release it from the Central Portal only after its validation succeeds.
+
+## Runtime and logging
+
+Java 17 is the minimum runtime requirement.
+
+The library depends only on `org.slf4j:slf4j-api` and does not ship an SLF4J provider. Host applications must add and
+configure their chosen compatible provider themselves; consumers must not expect `logback-classic` to be supplied
+transitively.
+
+The library emits minimal lifecycle information at `INFO`, internal traversal, scoring, and node-removal decisions at
+`DEBUG`, recoverable parser and JSON-LD failures at `WARN`, and unrecoverable failures at `ERROR`.
+
+Article HTML, `innerHTML`, `outerHTML`, and full DOM serializations are never emitted through the library logger.
 
 ## Usage
 
