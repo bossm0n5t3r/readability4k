@@ -138,14 +138,17 @@ object ReadabilityUtils {
             return false
         }
         val heading = getInnerText(element, false)
-        LOGGER.info(
-            "Evaluating similarity of header: {}, articleTitle: {}",
-            heading,
-            p.articleTitle,
-        )
         val articleTitleInProperties =
             requireNotNull(p.articleTitle) { "articleTitle should not be null" }
-        return textSimilarity(articleTitleInProperties, heading) > BigDecimal.valueOf(0.75)
+        val similarity = textSimilarity(articleTitleInProperties, heading)
+        LOGGER.debug(
+            "Evaluating header similarity: tag={}, headingLength={}, articleTitleLength={}, similarity={}",
+            element.tagName,
+            heading.length,
+            articleTitleInProperties.length,
+            similarity,
+        )
+        return similarity > BigDecimal.valueOf(0.75)
     }
 
     fun removeNodes(elements: List<Element>, filterFn: ((Element) -> Boolean)? = null) {
@@ -204,7 +207,12 @@ object ReadabilityUtils {
         removeNodes(headingNodes) { element ->
             val shouldRemove = getClassWeight(element, p) < 0
             if (shouldRemove) {
-                LOGGER.info("Removing header with low class weight: {}", element)
+                LOGGER.debug(
+                    "Removing header with low class weight: tag={}, id={}, class={}",
+                    element.tagName,
+                    element.id,
+                    element.className,
+                )
             }
             shouldRemove
         }
@@ -1342,7 +1350,7 @@ object ReadabilityUtils {
                     metadata["datePublished"] = it.trim()
                 }
             } catch (e: Exception) {
-                LOGGER.warn("Failed to parse JSON-LD: ${e.message}")
+                LOGGER.warn("Failed to parse JSON-LD", e)
             }
         }
 
@@ -1445,20 +1453,20 @@ object ReadabilityUtils {
     }
 
     fun grabArticle(page: Element? = null, p: ReadabilityProperties): Element? {
-        LOGGER.info("**** grabArticle ****")
+        LOGGER.debug("**** grabArticle ****")
         val document = p.document
         val isPaging = page != null
         val currentPage = page ?: document.body
 
         if (currentPage == null) {
-            LOGGER.info("No body found in document. Abort.")
+            LOGGER.debug("No body found in document. Abort.")
             return null
         }
 
         val pageCacheHtml = currentPage.innerHTML
 
         while (true) {
-            LOGGER.info("Starting grabArticle loop")
+            LOGGER.debug("Starting grabArticle loop")
             val stripUnlikelyCandidates = flagIsActive(p, FLAG_STRIP_UNLIKELYS)
 
             val elementsToScore = mutableListOf<Element>()
@@ -1473,7 +1481,7 @@ object ReadabilityUtils {
                 val matchString = "${node.className} ${node.id}"
 
                 if (!isProbablyVisible(node)) {
-                    LOGGER.info("Removing hidden node - {}", matchString)
+                    LOGGER.debug("Removing hidden node - {}", matchString)
                     node = removeAndGetNext(node)
                     continue
                 }
@@ -1510,10 +1518,11 @@ object ReadabilityUtils {
                 }
 
                 if (shouldRemoveTitleHeader && headerDuplicatesTitle(node, p)) {
-                    LOGGER.info(
-                        "Removing header: {}, {}",
-                        node.textContent.trim(),
-                        p.articleTitle?.trim(),
+                    LOGGER.debug(
+                        "Removing header: tag={}, id={}, class={}",
+                        node.tagName,
+                        node.id,
+                        node.className,
                     )
                     shouldRemoveTitleHeader = false
                     node = removeAndGetNext(node)
@@ -1529,13 +1538,13 @@ object ReadabilityUtils {
                             node.tagName != "BODY" &&
                             node.tagName != "A"
                     ) {
-                        LOGGER.info("Removing unlikely candidate - {}", matchString)
+                        LOGGER.debug("Removing unlikely candidate - {}", matchString)
                         node = removeAndGetNext(node)
                         continue
                     }
 
                     if (node.getAttribute("role") in UNLIKELY_ROLES) {
-                        LOGGER.info(
+                        LOGGER.debug(
                             "Removing content with role {} - {}",
                             node.getAttribute("role"),
                             matchString,
@@ -1666,7 +1675,13 @@ object ReadabilityUtils {
                     candidate.getContentScore() * (1 - getLinkDensity(candidate).toDouble())
                 candidate.setContentScore(candidateScore)
 
-                LOGGER.info("Candidate: {} with score {}", candidate, candidateScore)
+                LOGGER.debug(
+                    "Candidate: tag={}, id={}, class={}, score={}",
+                    candidate.tagName,
+                    candidate.id,
+                    candidate.className,
+                    candidateScore,
+                )
 
                 var inserted = false
                 for (i in 0 until minOf(p.nbTopCandidates, topCandidates.size)) {
@@ -1696,7 +1711,14 @@ object ReadabilityUtils {
 
                 var currentPageFirstChild = currentPage.firstChild
                 while (currentPageFirstChild != null) {
-                    LOGGER.info("Moving child out: {}", currentPageFirstChild)
+                    val childElement = currentPageFirstChild as? Element
+                    LOGGER.debug(
+                        "Moving child out: tag={}, id={}, class={}, nodeType={}",
+                        childElement?.tagName,
+                        childElement?.id,
+                        childElement?.className,
+                        currentPageFirstChild.nodeType,
+                    )
                     topCandidate.appendChild(currentPageFirstChild)
                     currentPageFirstChild = currentPage.firstChild
                 }
@@ -1793,9 +1815,14 @@ object ReadabilityUtils {
             siblings.forEach { sibling ->
                 var append = false
 
-                LOGGER.info("Looking at sibling node: {}", sibling)
+                LOGGER.debug(
+                    "Looking at sibling node: tag={}, id={}, class={}",
+                    sibling.tagName,
+                    sibling.id,
+                    sibling.className,
+                )
                 val siblingContentScore = sibling.getContentScore()
-                LOGGER.info("Sibling has score {}", siblingContentScore)
+                LOGGER.debug("Sibling has score {}", siblingContentScore)
 
                 if (sibling === topCandidate) {
                     append = true
@@ -1832,11 +1859,21 @@ object ReadabilityUtils {
                 }
 
                 if (append) {
-                    LOGGER.info("Appending node: {}", sibling)
+                    LOGGER.debug(
+                        "Appending node: tag={}, id={}, class={}",
+                        sibling.tagName,
+                        sibling.id,
+                        sibling.className,
+                    )
 
                     val nodeToAppend =
                         if (sibling.tagName !in ALTER_TO_DIV_EXCEPTIONS) {
-                            LOGGER.info("Altering sibling: {} to div.", sibling)
+                            LOGGER.debug(
+                                "Altering sibling: tag={}, id={}, class={} to div.",
+                                sibling.tagName,
+                                sibling.id,
+                                sibling.className,
+                            )
                             setNodeTag(sibling, "div")
                         } else {
                             sibling
@@ -1848,13 +1885,13 @@ object ReadabilityUtils {
             }
 
             if (p.debug) {
-                LOGGER.info("Article content pre-prep: {}", articleContent.innerHTML)
+                LOGGER.debug("Preparing extracted article content")
             }
 
             prepArticle(articleContent, p)
 
             if (p.debug) {
-                LOGGER.info("Article content post-prep: {}", articleContent.innerHTML)
+                LOGGER.debug("Prepared extracted article content")
             }
 
             if (neededToCreateTopCandidate) {
@@ -1874,7 +1911,7 @@ object ReadabilityUtils {
             }
 
             if (p.debug) {
-                LOGGER.info("Article content after paging: {}", articleContent.innerHTML)
+                LOGGER.debug("Completed extracted article paging")
             }
 
             var parseSuccessful = true

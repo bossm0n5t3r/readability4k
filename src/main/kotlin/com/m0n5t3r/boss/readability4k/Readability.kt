@@ -31,7 +31,6 @@ class Readability(doc: Document, options: ReadabilityOptions = ReadabilityOption
         p.articleTitle = p.metadata["title"]
 
         val articleContent = grabArticle(page = null, p = p) ?: return null
-        LOGGER.info("Grabbed: ${articleContent.innerHTML}")
 
         postProcessContent(articleContent, p)
 

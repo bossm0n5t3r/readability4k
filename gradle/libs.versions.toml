@@ -5,6 +5,7 @@ ktfmt-gradle = "0.26.0"
 jsoup = "1.22.2"
 kotlinx-serialization = "1.11.0"
 slf4j = "2.0.18"
+logback-classic = "1.5.38"
 kotest = "6.2.2"
 mockk = "1.14.11"
 
@@ -24,6 +25,9 @@ kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", versi
 
 # SLF4J
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+
+# Test logging provider
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback-classic" }
 
 # Kotest
 kotest-framework-engine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }

@@ -35,7 +35,7 @@ class DOMParser {
     }
 
     private fun error(message: String) {
-        LOGGER.error("JSDOMParser error: $message")
+        LOGGER.warn("JSDOMParser error: {}", message)
         errorState += "$message\n"
     }
 

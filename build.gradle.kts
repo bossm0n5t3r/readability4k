@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.slf4j.api)
     testImplementation(libs.kotlin.test.junit5)
+    testImplementation(libs.logback.classic)
     testImplementation(libs.kotest.framework.engine)
     testImplementation(libs.kotest.runner.junit5)
     testImplementation(libs.mockk)
