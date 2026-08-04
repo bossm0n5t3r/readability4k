@@ -8,21 +8,6 @@ from HTML pages using a self-contained DOM implementation.
 This project is licensed under the Apache License 2.0. See the `LICENSE` file for the full license text and `NOTICE` for
 attribution.
 
-## Maven coordinates
-
-```text
-com.m0n5t3r.boss:readability4k:1.1.0
-```
-
-Maven Central Portal publication is configured. After verifying the `com.m0n5t3r.boss` namespace, run:
-
-```sh
-./deploy.sh
-```
-
-The script prompts for any missing PGP and Central Portal credentials without persisting them. It creates a signed
-Central bundle and uploads it as `USER_MANAGED`; release it from the Central Portal only after its validation succeeds.
-
 ## Runtime and logging
 
 Java 17 is the minimum runtime requirement.
