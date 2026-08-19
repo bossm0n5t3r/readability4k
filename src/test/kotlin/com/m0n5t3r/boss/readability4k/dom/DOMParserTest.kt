@@ -526,6 +526,28 @@ class DOMParserTest :
             }
         }
 
+        describe("Closing tag whitespace") {
+            it("should allow whitespace before the closing tag delimiter") {
+                val html =
+                    """
+                    <html><body>
+                      <header><nav><ul><li><a href="#">
+                        <svg><title>Github</title><path/></svg
+                        ></a></li></ul></nav></header>
+                      <main><p>Article content</p></main>
+                    </body></html>
+                    """
+                        .trimIndent()
+                val parser = DOMParser()
+
+                val doc = parser.parse(html)
+
+                parser.errorState shouldBe ""
+                doc.getElementsByTagName("svg").size shouldBe 1
+                doc.getElementsByTagName("p").single().textContent shouldBe "Article content"
+            }
+        }
+
         describe("Recovery from self-closing tags that have close tags") {
             it("should handle delayed closing of a tag") {
                 val html = """<div><input><p>I'm in an input</p></input></div>"""

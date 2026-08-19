@@ -154,6 +154,24 @@ class DOMParser {
             false
         }
 
+    private fun matchClosingTag(tag: String): Boolean {
+        if (!html.startsWith("</", currentChar)) return false
+
+        var cursor = currentChar + 2
+        if (!html.regionMatches(cursor, tag, 0, tag.length, ignoreCase = true)) return false
+        cursor += tag.length
+
+        val delimiter = html.getOrNull(cursor)
+        if (delimiter != '>' && delimiter !in WHITESPACE) return false
+        while (html.getOrNull(cursor) in WHITESPACE) {
+            cursor++
+        }
+        if (html.getOrNull(cursor) != '>') return false
+
+        currentChar = cursor + 1
+        return true
+    }
+
     @Suppress("SameParameterValue")
     private fun discardTo(str: String) {
         val index = html.indexOf(str, currentChar)
@@ -298,7 +316,7 @@ class DOMParser {
                 if (!readRawText(node)) return null
             } else {
                 readChildren(node)
-                if (!match(closingTag)) {
+                if (!matchClosingTag(node.matchingTag)) {
                     if (isImplicitlyClosedByListItem(node)) return node
                     val errorMessage =
                         if (currentChar < 0 || currentChar >= html.length) {
