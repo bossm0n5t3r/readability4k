@@ -23,6 +23,23 @@ class DOMParserCompatibilityTest :
                 parser.errorState shouldBe ""
             }
 
+            it("should allow whitespace before a script closing tag delimiter") {
+                val parser = DOMParser()
+                val doc =
+                    parser.parse(
+                        """
+                        <html><head><script>const markup = "<span>text</span>";</script
+                        ></head><body><p>Article text.</p></body></html>
+                        """
+                            .trimIndent()
+                    )
+
+                doc.getElementsByTagName("script").single().textContent shouldBe
+                    """const markup = "<span>text</span>";"""
+                doc.body.shouldNotBeNull().textContent shouldBe "Article text."
+                parser.errorState shouldBe ""
+            }
+
             it("should not require closing tags for void elements") {
                 val parser = DOMParser()
                 val doc =
@@ -71,6 +88,19 @@ class DOMParserCompatibilityTest :
                 listItem.textContent shouldBe "First item"
                 link.firstElementChild?.localName shouldBe "span"
                 parser.errorState shouldBe ""
+            }
+
+            it("should reset parser errors between parse calls") {
+                val parser = DOMParser()
+
+                parser.parse("<div><span>broken</div>")
+                parser.errorState shouldBe ""
+                parser.parse("<div>unfinished")
+                parser.errorState.isNotEmpty() shouldBe true
+                val recovered = parser.parse("<main>valid</main>")
+
+                parser.errorState shouldBe ""
+                recovered.getElementsByTagName("main").single().textContent shouldBe "valid"
             }
         }
     })

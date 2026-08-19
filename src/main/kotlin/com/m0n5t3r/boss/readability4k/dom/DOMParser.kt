@@ -13,13 +13,14 @@ class DOMParser {
 
     companion object {
         private val WHITESPACE = setOf(' ', '\t', '\n', '\r')
-        private val INLINE_ELEMENTS = setOf("a", "span")
+        private val HEADING_ELEMENTS = setOf("h1", "h2", "h3", "h4", "h5", "h6")
         private val LEGACY_CONTAINER_VOID_ELEMENTS = setOf("base", "input")
     }
 
     fun parse(html: String, url: String = ""): Document {
         this.html = html
         this.currentChar = 0
+        this.errorState = ""
         this.openElements.clear()
         this.doc = Document(url)
 
@@ -156,22 +157,58 @@ class DOMParser {
             false
         }
 
-    private fun matchClosingTag(tag: String): Boolean {
-        if (!html.startsWith("</", currentChar)) return false
+    private fun closingTagEndAt(tag: String, start: Int): Int {
+        if (!html.startsWith("</", start)) return -1
 
-        var cursor = currentChar + 2
-        if (!html.regionMatches(cursor, tag, 0, tag.length, ignoreCase = true)) return false
+        var cursor = start + 2
+        if (!html.regionMatches(cursor, tag, 0, tag.length, ignoreCase = true)) return -1
         cursor += tag.length
 
         val delimiter = html.getOrNull(cursor)
-        if (delimiter != '>' && delimiter !in WHITESPACE) return false
+        if (delimiter != '>' && delimiter !in WHITESPACE) return -1
         while (html.getOrNull(cursor) in WHITESPACE) {
             cursor++
         }
-        if (html.getOrNull(cursor) != '>') return false
+        return if (html.getOrNull(cursor) == '>') cursor + 1 else -1
+    }
 
-        currentChar = cursor + 1
+    private fun matchClosingTag(tag: String): Boolean {
+        val end = closingTagEndAt(tag, currentChar)
+        if (end == -1) return false
+
+        currentChar = end
         return true
+    }
+
+    private fun findClosingTag(tag: String): Int {
+        var searchFrom = currentChar
+        while (true) {
+            val start = html.indexOf("</", searchFrom)
+            if (start == -1) return -1
+            if (closingTagEndAt(tag, start) != -1) return start
+            searchFrom = start + 2
+        }
+    }
+
+    private fun closingTagName(): String? {
+        if (!html.startsWith("</", currentChar)) return null
+
+        val start = currentChar + 2
+        var cursor = start
+        while (true) {
+            val char = html.getOrNull(cursor) ?: return null
+            if (char == '>' || char in WHITESPACE) break
+            cursor++
+        }
+        if (cursor == start) return null
+
+        var end = cursor
+        while (html.getOrNull(end) in WHITESPACE) {
+            end++
+        }
+        if (html.getOrNull(end) != '>') return null
+
+        return html.substring(start, cursor).lowercase()
     }
 
     @Suppress("SameParameterValue")
@@ -210,18 +247,26 @@ class DOMParser {
         }
     }
 
-    private fun discardUnexpectedClosingTag(): Boolean {
-        if (!html.startsWith("</", currentChar)) return false
-
-        val end = html.indexOf('>', currentChar + 2)
-        if (end == -1) return false
-
-        val tag = html.substring(currentChar + 2, end).trim()
-        if (openElements.any { tag.equals(it.matchingTag, ignoreCase = true) }) {
-            return false
+    private fun closingTagClosesOpenElement(): Boolean {
+        val tag = closingTagName() ?: return false
+        return openElements.any {
+            tag.equals(it.matchingTag, ignoreCase = true) ||
+                (tag in HEADING_ELEMENTS && it.localName in HEADING_ELEMENTS)
         }
+    }
 
-        currentChar = end + 1
+    private fun matchMismatchedHeadingClosingTag(node: Element): Boolean {
+        if (node.localName !in HEADING_ELEMENTS) return false
+
+        val tag = closingTagName() ?: return false
+        return tag in HEADING_ELEMENTS && matchClosingTag(tag)
+    }
+
+    private fun discardUnexpectedClosingTag(): Boolean {
+        val tag = closingTagName() ?: return false
+        if (closingTagClosesOpenElement()) return false
+
+        currentChar = closingTagEndAt(tag, currentChar)
         return true
     }
 
@@ -242,25 +287,17 @@ class DOMParser {
 
     private fun readRawText(node: Element): Boolean {
         val closingTag = "</${node.matchingTag}>"
-        val end = html.indexOf(closingTag, currentChar, ignoreCase = true)
-        if (end == -1) {
+        val start = findClosingTag(node.matchingTag)
+        if (start == -1) {
             error("expected '$closingTag' but reached end of document")
             return false
         }
 
-        if (currentChar < end) {
-            node.appendChild(TextNode().apply { innerHTML = html.substring(currentChar, end) })
+        if (currentChar < start) {
+            node.appendChild(TextNode().apply { innerHTML = html.substring(currentChar, start) })
         }
-        currentChar = end + closingTag.length
+        currentChar = closingTagEndAt(node.matchingTag, start)
         return true
-    }
-
-    private fun isImplicitlyClosedByListItem(node: Element): Boolean {
-        if (node.localName !in INLINE_ELEMENTS || !html.startsWith("</", currentChar)) return false
-
-        val end = html.indexOf('>', currentChar + 2)
-        return end != -1 &&
-            html.substring(currentChar + 2, end).trim().equals("li", ignoreCase = true)
     }
 
     private fun readNode(): Node? {
@@ -320,7 +357,7 @@ class DOMParser {
         val closingTag = "</${node.matchingTag}>"
         val hasExplicitClosingTag =
             node.localName in LEGACY_CONTAINER_VOID_ELEMENTS &&
-                html.indexOf(closingTag, currentChar, ignoreCase = true) != -1
+                findClosingTag(node.matchingTag) != -1
         if (!closed && (node.localName !in Element.VOID_ELEMENTS || hasExplicitClosingTag)) {
             if (
                 node.localName == "script" &&
@@ -331,7 +368,8 @@ class DOMParser {
             } else {
                 readChildren(node)
                 if (!matchClosingTag(node.matchingTag)) {
-                    if (isImplicitlyClosedByListItem(node)) return node
+                    if (matchMismatchedHeadingClosingTag(node)) return node
+                    if (closingTagClosesOpenElement()) return node
                     val errorMessage =
                         if (currentChar < 0 || currentChar >= html.length) {
                             ", but currentChar < 0 || currentChar >= html.length, $currentChar, ${html.length}"

@@ -570,6 +570,42 @@ class DOMParserTest :
                 doc.getElementsByTagName("main").single().textContent shouldBe
                     "Article remains available"
             }
+
+            it("should ignore a namespaced closing tag without an open element") {
+                val parser = DOMParser()
+
+                val doc =
+                    parser.parse(
+                        "<html><head></esi:include><title>IKEA</title></head><body></body></html>"
+                    )
+
+                parser.errorState shouldBe ""
+                doc.title shouldBe "IKEA"
+                doc.head.shouldNotBeNull()
+            }
+
+            it("should close an open heading with another heading end tag") {
+                val html =
+                    """
+                    <html><body><main><div id="section">
+                      <h2>Feedback question</h3>
+                      <div id="option">Feedback option</div>
+                    </div><p>Article content</p></main></body></html>
+                    """
+                        .trimIndent()
+                val parser = DOMParser()
+
+                val doc = parser.parse(html)
+                val section = doc.getElementById("section").shouldNotBeNull()
+                val heading = section.children[0]
+                val option = doc.getElementById("option").shouldNotBeNull()
+
+                parser.errorState shouldBe ""
+                section.children.map { it.localName } shouldBe listOf("h2", "div")
+                option.parentNode shouldBe section
+                heading.nextElementSibling shouldBe option
+                doc.getElementsByTagName("p").single().textContent shouldBe "Article content"
+            }
         }
 
         describe("Recovery from self-closing tags that have close tags") {
