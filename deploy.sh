@@ -108,6 +108,9 @@ fi
 if [ -z "${SIGNING_KEY+x}" ]; then
   require_interactive_input "SIGNING_KEY"
   require_command gpg
+  require_command gpgconf
+  export GPG_TTY="$(tty)"
+  gpgconf --kill gpg-agent
   printf 'PGP signing key fingerprint: '
   read -r signing_key_fingerprint
   if [ -z "$signing_key_fingerprint" ]; then
