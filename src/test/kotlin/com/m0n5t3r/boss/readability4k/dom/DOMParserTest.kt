@@ -548,6 +548,30 @@ class DOMParserTest :
             }
         }
 
+        describe("Unexpected closing tags") {
+            it("should ignore a closing tag without an open element") {
+                val html =
+                    """
+                    <html><body><div id="theme-info"><p>
+                      <span><a href="#">Blog at WordPress.com.</a></span>
+                      Ben Eastaugh and Chris Sternal-Johnson.
+                      </span>
+                    </p></div><main>Article remains available</main></body></html>
+                    """
+                        .trimIndent()
+                val parser = DOMParser()
+
+                val doc = parser.parse(html)
+
+                parser.errorState shouldBe ""
+                doc.getElementById("theme-info")
+                    ?.textContent
+                    ?.contains("Ben Eastaugh and Chris Sternal-Johnson.") shouldBe true
+                doc.getElementsByTagName("main").single().textContent shouldBe
+                    "Article remains available"
+            }
+        }
+
         describe("Recovery from self-closing tags that have close tags") {
             it("should handle delayed closing of a tag") {
                 val html = """<div><input><p>I'm in an input</p></input></div>"""

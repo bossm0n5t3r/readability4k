@@ -7,6 +7,7 @@ class DOMParser {
     private var currentChar: Int = 0
     private val strBuf: StringBuilder = StringBuilder()
     private val retPair: Array<Any?> = arrayOfNulls(2)
+    private val openElements: ArrayDeque<Element> = ArrayDeque()
     var errorState: String = ""
     private lateinit var doc: Document
 
@@ -19,6 +20,7 @@ class DOMParser {
     fun parse(html: String, url: String = ""): Document {
         this.html = html
         this.currentChar = 0
+        this.openElements.clear()
         this.doc = Document(url)
 
         readChildren(doc)
@@ -184,28 +186,40 @@ class DOMParser {
     }
 
     private fun readChildren(node: Node) {
-        while (true) {
-            val child = readNode()
-            if (child == null) {
-                if (!discardIgnorableClosingTag(node)) return
-                continue
-            }
+        val element = node as? Element
+        if (element != null) {
+            openElements.addLast(element)
+        }
 
-            if (child.nodeType != NodeType.COMMENT_NODE) {
-                node.appendChild(child)
+        try {
+            while (true) {
+                val child = readNode()
+                if (child == null) {
+                    if (!discardUnexpectedClosingTag()) return
+                    continue
+                }
+
+                if (child.nodeType != NodeType.COMMENT_NODE) {
+                    node.appendChild(child)
+                }
+            }
+        } finally {
+            if (element != null) {
+                openElements.removeLast()
             }
         }
     }
 
-    private fun discardIgnorableClosingTag(parent: Node): Boolean {
+    private fun discardUnexpectedClosingTag(): Boolean {
         if (!html.startsWith("</", currentChar)) return false
 
         val end = html.indexOf('>', currentChar + 2)
         if (end == -1) return false
 
-        val tag = html.substring(currentChar + 2, end).trim().lowercase()
-        if (parent is Element && tag.equals(parent.matchingTag, ignoreCase = true)) return false
-        if (tag != "script" && tag !in Element.VOID_ELEMENTS) return false
+        val tag = html.substring(currentChar + 2, end).trim()
+        if (openElements.any { tag.equals(it.matchingTag, ignoreCase = true) }) {
+            return false
+        }
 
         currentChar = end + 1
         return true
